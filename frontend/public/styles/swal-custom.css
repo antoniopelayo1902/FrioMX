@@ -1,0 +1,64 @@
+/* Estilos personalizados para SweetAlert2 */
+
+/* Botones de SweetAlert2 */
+.swal2-confirm,
+.swal2-cancel {
+    font-weight: 600 !important;
+    padding: 10px 24px !important;
+    border-radius: 8px !important;
+    font-size: 14px !important;
+    transition: all 0.3s ease !important;
+    border: none !important;
+}
+
+/* Botón de confirmar */
+.swal2-confirm {
+    background-color: #3b82f6 !important;
+    color: white !important;
+}
+
+.swal2-confirm:hover {
+    background-color: #2563eb !important;
+    transform: scale(1.02);
+}
+
+/* Botón de cancelar */
+.swal2-cancel {
+    background-color: #6b7280 !important;
+    color: white !important;
+}
+
+.swal2-cancel:hover {
+    background-color: #4b5563 !important;
+    transform: scale(1.02);
+}
+
+/* Contenedor de botones */
+.swal2-actions {
+    gap: 10px !important;
+    margin-top: 20px !important;
+}
+
+/* Modal */
+.swal2-popup {
+    border-radius: 12px !important;
+    padding: 24px !important;
+}
+
+/* Título */
+.swal2-title {
+    font-size: 24px !important;
+    font-weight: 600 !important;
+    color: #1f2937 !important;
+}
+
+/* Texto */
+.swal2-html-container {
+    font-size: 16px !important;
+    color: #4b5563 !important;
+}
+
+/* Icono */
+.swal2-icon {
+    margin: 20px auto !important;
+}

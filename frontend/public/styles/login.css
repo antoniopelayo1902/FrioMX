@@ -1,0 +1,77 @@
+.credencialesInput{
+    border-radius: 10px;
+}
+
+.credencialesTexto{
+    color: white;
+}
+
+#btnRegistrarse :visited{
+    color: black;
+}
+
+#contenedorGeneralLogin{
+    margin-top: 15%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
+
+.modal
+{
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+
+}
+
+.modal-content {
+    background-color: rgba(65, 91, 134, 0.5);
+    border-radius: 10px;
+    margin: 15% auto;
+    padding: 20px;
+    width: 30%;
+    border: 2px solid rgba(68, 119, 193, 0.5);
+}
+
+#acceptButton
+{
+    background-color: rgb(255, 255, 255);
+    border-radius: 10px;
+    padding: 5px;
+    color: black;
+}
+
+/* Estilos para botones de login y registro */
+.bg-primary-600 {
+    background-color: #2563eb !important;
+}
+
+.bg-primary-600:hover,
+.hover\:bg-primary-700:hover {
+    background-color: #1d4ed8 !important;
+}
+
+button[type="submit"] {
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+button[type="submit"]:hover {
+    transform: scale(1.02);
+}
+
+/* Dark mode support */
+.dark .dark\:bg-primary-600 {
+    background-color: #2563eb !important;
+}
+
+.dark .dark\:hover\:bg-primary-700:hover {
+    background-color: #1d4ed8 !important;
+}

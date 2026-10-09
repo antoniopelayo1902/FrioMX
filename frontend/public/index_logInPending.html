@@ -1,0 +1,178 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Inicio</title>
+    <link rel="stylesheet" href="styles/output.css">
+    <link rel="icon" href="assets/images/icon.png" type="image/png">
+    <link rel="stylesheet" href="styles/index.css">
+    <script src="scripts/config.js"></script>
+
+</head>
+<body>
+
+<div id="preloader">
+    <div class="cardL">
+        <div class="loader">
+            <p>Frio</p>
+            <div class="words">
+                <span class="word">apuestas</span>
+                <span class="word">juegos</span>
+                <span class="word">ruleta</span>
+                <span class="word">casino</span>
+                <span class="word">diversion</span>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+
+<div class="h-screen w-full bg-white relative flex overflow-hidden ">
+
+
+
+
+    <div class="w-full h-full flex flex-col justify-between">
+        <header id="nav" class="h-20 w-full flex items-center relative justify-between px-5 space-x-10 dark:bg-[#1a2c38] ">
+            <div id="mainText" class="invisible px-3 dark:text-white text-6xl ">
+                Frio
+            </div>
+
+            <div class=" flex flex-none ">
+                <img src="/assets/images/full_logo.png" alt="iconOnMainPage">
+            </div>
+
+            <div class="flex flex-shrink-0 items-center space-x-4 text-white">
+
+
+                <div id="prof" class="flex px-3 space-x-3">
+                    <button id="buttonSingIn" class="btn" onclick="goToInit()" >
+                        Iniciar Sesion
+                    </button>
+                </div>
+
+                <div id="reg" class="flex px-3 space-x-3">
+                    <button id="buttonRegis" class="btn" onclick="goToReg()">
+                        Registrarse
+                    </button>
+                </div>
+            </div>
+        </header>
+
+
+
+
+
+        <main id="mains" class="max-w-full h-full flex relative overflow-y-hidden  ">
+
+            <div class="h-full w-full m-4 flex flex-wrap items-start justify-start rounded-tl grid-flow-col auto-cols-max gap-4 overflow-y-scroll">
+
+
+                <div class="flex items-center justify-center w-full  py-24 sm:py-8 px-4">
+
+                    <div class="w-full relative flex items-center justify-center">
+
+
+
+                        <div class="w-full h-full mx-auto overflow-x-hidden overflow-y-hidden">
+                            <div class="flex flex-row justify-between items-center">
+                                <div id="gamesTitle" class="px-3 dark:text-white text-4xl py-4">
+                                    <i class="fa-solid fa-fire fa-xs"></i> Juegos originales
+                                </div>
+                                <div class="flex flex-row">
+                                    <button aria-label="slide backward" class="focus:outline-none focus:bg-gray-400 focus:ring-2 focus:ring-offset-2 focus:ring-gray-400 cursor-pointer" id="prev">
+                                        <svg class="dark:text-white" width="8" height="14" viewBox="0 0 8 14" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M7 1L1 7L7 13" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" /></svg>
+                                    </button>
+                                    <button aria-label="slide forward" class="ml-2 focus:outline-none focus:bg-gray-400 focus:ring-2 focus:ring-offset-2 focus:ring-gray-400" id="next">
+                                        <svg class="dark:text-white" width="8" height="14" viewBox="0 0 8 14" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M1 1L7 7L1 13" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" /></svg>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div id="slider" class="h-full flex lg:gap-8 md:gap-6 gap-14 items-center justify-start transition ease-out duration-700">
+                                <div class="flex flex-shrink-0 relative w-full sm:w-auto">
+                                    <a id="cardHov3" onclick="goToInit()">
+                                        <img src="/assets/images/cleanImages/rouletteCar.jpg" alt="black chair and white table" class="object-cover object-center w-80" />
+                                    </a>
+                                </div>
+                                <div class="flex flex-shrink-0 relative w-full sm:w-auto">
+                                    <a id="cardHov2" onclick="goToInit()">
+                                        <img src="/assets/images/cleanImages/hiloCar.jpg" alt="black chair and white table" class="object-cover object-center w-80" />
+                                    </a>
+                                </div>
+                                <div class="flex flex-shrink-0 relative w-full sm:w-auto">
+                                    <a id="cardHov4" onclick="goToInit()">
+                                        <img src="/assets/images/cleanImages/mine.jpg" alt="black chair and white table" class="object-cover object-center w-80" />
+                                    </a>
+                                </div>
+                                <div class="flex flex-shrink-0 relative w-full sm:w-auto">
+                                    <a class="cardHov9" onclick="goToInit()">
+                                        <img src="/assets/images/cleanImages/slideCar.jpg" alt="black chair and white table" class="object-cover object-center w-80" />
+                                    </a>
+                                </div>
+
+                                <div class="flex flex-shrink-0 relative w-full sm:w-auto">
+                                    <a class="cardHov9" onclick="goToInit()">
+                                        <img src="/assets/images/cleanImages/pokerCar.jpg" alt="black chair and white table" class="object-cover object-center w-80" />
+                                    </a>
+                                </div>
+                                <div class="flex flex-shrink-0 relative w-full sm:w-auto">
+                                    <a class="cardHov9" onclick="goToInit()">
+                                        <img src="/assets/images/cleanImages/limboCar.jpg" alt="black chair and white table" class="object-cover object-center w-80" />
+                                    </a>
+                                </div>
+                                <div class="flex flex-shrink-0 relative w-full sm:w-auto">
+                                    <a class="cardHov9" onclick="goToInit()">
+                                        <img src="/assets/images/cleanImages/diamondsCart.jpg" alt="black chair and white table" class="object-cover object-center w-80" />
+                                    </a>
+                                </div>
+
+
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+
+
+
+
+            </div>
+        </main>
+    </div>
+
+</div>
+
+
+<script>
+    const next = document.getElementById('next');
+    const prev = document.getElementById('prev')
+    function goNext()
+    {
+        defaultTransform = defaultTransform - 398;
+        var slider = document.getElementById("slider");
+        if (Math.abs(defaultTransform) >= slider.scrollWidth / 1.7) defaultTransform = 0;
+        slider.style.transform = "translateX(" + defaultTransform + "px)";
+    }
+
+    next.addEventListener('click', goNext);
+
+    function goPrev()
+    {
+        var slider = document.getElementById("slider");
+        if (Math.abs(defaultTransform) === 0) defaultTransform = 0;
+        else defaultTransform = defaultTransform + 398;
+        slider.style.transform = "translateX(" + defaultTransform + "px)";
+    }
+    prev.addEventListener("click", goPrev);
+</script>
+
+
+
+</body>
+<script src="/scripts/indexLoading.js"></script>
+<script src="https://kit.fontawesome.com/549e1abe3e.js" crossorigin="anonymous"></script>
+</html>

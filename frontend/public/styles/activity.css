@@ -1,0 +1,193 @@
+#profile-container {
+    display: flex;
+    flex-direction: row;
+    outline: 1px solid gray;
+    font-family: Arial, Helvetica, sans-serif;
+    height: 100vh;
+}
+
+#main {
+    flex: 4;
+    color: white;
+    display: flex;
+    flex-direction: column;
+    padding: 10px;
+}
+
+#main hr {
+    display: block;
+    height: 1px;
+    border: 0;
+    border-top: 1px solid #ccc;
+    margin: 1em 0;
+    padding: 0;
+}
+
+#main-header{
+    display: flex;
+    direction: column;
+    color: white;
+    align-items: center;
+}
+
+#main-header span {
+    color: #d6dae1;
+    margin-right: 10px;
+}
+
+
+#main h1 {
+    font-size: x-large;
+    margin-bottom: 10px;
+}
+
+#main-header .badge {
+  background-color: white;
+  color: #2b414e;
+  padding: 4px 8px;
+  text-align: center;
+  border-radius: 5px;
+  font-weight: bold;
+}
+
+
+#account-details {
+    display: grid;
+    grid-template-columns: 0.1fr 2.5fr 1fr;
+    color: black;
+    border-radius: 2px;
+}
+
+#account-details-left {
+    border-radius: 10px;
+    background-color: #172833;
+    margin-top: 5px;
+    padding: 15px;   
+}
+
+#account-details-left h3 {
+    color: #eceef2;
+}
+
+#account-details-right {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-direction: column;
+}
+
+#account-details-right img {
+    border-radius: 50%;
+    width: 100px;
+    height: 100px;
+}
+
+#account-details-right span {
+    margin-top: 10px;
+    font-weight: 500;
+    color: #eceef2;
+}
+
+.account-input {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+}
+
+.account-input .detail{
+    color: #eceef2;
+}
+
+.account-input .edit{
+    justify-self: end;
+    margin-right: 20px;
+    color: #d2dcee;
+}
+
+.account-input .info {
+    justify-self: center;
+    color: #eceef2;
+}
+
+
+.activity-container-header {
+    background-color: #132c3a21;
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    border: 1px solid gray;
+    border-radius: 10px 10px 0 0;
+    height: 40px;
+    align-items: center;
+}
+
+.activity-container-header div{
+    color: white;
+    padding: 4px 8px;
+    text-align: center;
+    font-weight: bold;
+}
+
+.activity-container-content-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    text-align: center;
+    border: 1px solid gray;
+    border-top: 0px;
+}
+
+.activity-container-content-column {
+    padding: 10px 1px 5px 5px;
+    display: flex;
+    justify-content: center;
+}
+
+.activity-container-content-column .game {
+    display: flex;
+    flex-direction: row;
+    justify-content: start;
+    align-items: center;
+    color: white;
+    gap: 20px;
+}
+
+.activity-container-content-column  img{
+    height: 40px;
+    border-radius: 5px;
+}
+
+.activity-container-content-column .cell{
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 10px 10px;
+}
+
+.activity-container-content-column .amount.positive{
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-weight: bold;
+    color: rgb(128, 223, 128);
+}
+
+.activity-container-content-column .amount.negative{
+    font-weight: bold;
+    color: rgb(223, 128, 128);
+}
+
+.activity-container-content-column .details{
+    border: 1px solid gray;
+    border-radius: 4px;
+    padding: 7px;
+}
+
+.changeButtons {
+    padding: 4px 8px;
+}
+
+.changeButtons:hover {
+    background-color: lightgray;
+    color: #2b414e;
+    padding: 4px 8px;
+    text-align: center;
+    border-radius: 5px;
+}

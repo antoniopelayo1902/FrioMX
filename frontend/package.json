@@ -1,0 +1,19 @@
+{
+  "name": "friomx-frontend",
+  "version": "1.0.0",
+  "description": "Frontend de FrioMx",
+  "private": true,
+  "scripts": {
+    "start": "node server.js",
+    "dev": "API_PROXY_TARGET=http://localhost:3000 node server.js",
+    "build:css": "tailwindcss -i ./public/styles/input.css -o ./public/styles/output.css --watch"
+  },
+  "license": "ISC",
+  "dependencies": {
+    "express": "4.22.3",
+    "http-proxy-middleware": "3.0.7"
+  },
+  "devDependencies": {
+    "tailwindcss": "3.4.19"
+  }
+}

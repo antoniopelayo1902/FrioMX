@@ -1,0 +1,214 @@
+#contenedorGeneralHiLo{
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+}
+
+.contenedorHiLo{
+    height: 100vh;
+    width: 100vw;
+    margin-top: 20vh;
+    display: grid;
+    grid-template-columns: 5% 5%;
+    grid-template-rows: 65% 10%;
+    justify-content: center;
+    padding-top: 2%;
+}
+
+.deck{
+    height: 100%;
+    width: 100%;
+    border: solid 1px black;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 3rem;
+    border-radius: .5rem;
+    color: white;
+    user-select: none;
+}
+
+.computer-card-slot{
+    grid-column: 1 / span 2;
+    height: 80vh;
+}
+
+.text{
+    grid-column: span 2;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.card{
+    position: relative;
+    height: 70%;
+    width: 200%;
+    margin-top: 120%;
+    border: 1px solid black;
+    border-radius: 2rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12rem;
+    background-color: white;
+}
+
+.card.red{
+    color: red;
+}
+
+.card.black{
+    color: black;
+}
+
+.card::before, .card::after{
+    position: absolute;
+    content: attr(data-value);
+    font-size: 5rem;
+}
+
+.card::before{
+    top: .5rem;
+    left: .5rem;
+}
+
+.card::after{
+    bottom: .5rem;
+    right: .5rem;
+    transform: rotate(180deg);
+}
+
+#contenedorBotonesHiLo{
+    width: 400%;
+    display: grid;
+    grid-template-columns: 45% 45%;
+    gap: 10%;
+}
+
+#cartaDinamica{
+    height: 40vh;
+    margin-bottom: 100%;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+
+.play {
+    width: 130px;
+    height: 50px;
+    font-size: 1.1em;
+    cursor: pointer;
+    background-image: linear-gradient(to right top, #1b2f3e, #182c3d, #16293b, #14263a, #132338, #13243a, #14263b, #14273d, #152d43, #173349, #183a4f, #1a4055);
+    color: #fff;
+    border: none;
+    border-radius: 10px;
+    transition: all .4s;
+}
+
+
+
+.jugar:hover {
+    border-radius: 10px;
+    transform: translateY(-10px);
+    box-shadow: 0 7px 0 -2px #bcdbe5,
+    0 15px 0 -4px #39a2db,
+    0 16px 10px -3px #39a2db;
+}
+
+.jugar:active {
+    transition: all 0.2s;
+    transform: translateY(-5px);
+    box-shadow: 0 2px 0 -2px #bcdbe5,
+    0 8px 0 -4px #39a2db,
+    0 12px 10px -3px #39a2db ;
+}
+
+
+
+.inputbox {
+    position: relative;
+    width: 196px;
+}
+
+.inputbox input {
+    position: relative;
+    width: 100%;
+    padding: 20px 10px 10px;
+    background: transparent;
+    outline: none;
+    box-shadow: none;
+    border: none;
+    color: white;
+    font-size: 1em;
+    letter-spacing: 0.05em;
+    transition: 0.5s;
+    z-index: 10;
+}
+
+.inputbox span {
+    position: absolute;
+    left: 0;
+    padding: 20px 10px 10px;
+    font-size: 1em;
+    color: white;
+    letter-spacing: 00.05em;
+    transition: 0.5s;
+    pointer-events: none;
+}
+
+.inputbox input:valid ~span,
+.inputbox input:focus ~span {
+
+    transform: translateX(-10px) translateY(-34px);
+    font-size: 0.75em;
+}
+
+.inputbox i {
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    width: 100%;
+    height: 2px;
+    background: #24969d;
+    border-radius: 4px;
+    transition: 0.5s;
+    pointer-events: none;
+    z-index: 9;
+}
+
+.inputbox input:valid ~i,
+.inputbox input:focus ~i {
+    height: 44px;
+}
+
+::-webkit-scrollbar {
+    width: 3px;
+    height: 5px;
+}
+::-webkit-scrollbar-thumb {
+
+
+    background: lightgray;
+    border-radius: 10px;
+}
+::-webkit-scrollbar-thumb:hover {
+    background: rgb(128, 128, 128);
+}
+::-webkit-scrollbar-track {
+    border-radius: 10px;
+}
+
+
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+.btnHiLo:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
