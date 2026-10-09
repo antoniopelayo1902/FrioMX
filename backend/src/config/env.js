@@ -8,6 +8,7 @@ function read(name, fallback) {
 
 const config = {
     port: Number(read('PORT', 3000)),
+    host: read('HOST', '127.0.0.1'),
     region: read('AWS_REGION', 'us-east-1'),
     ddbEndpoint: read('DDB_ENDPOINT', undefined),
     jwtSecret: read('JWT_SECRET', undefined),

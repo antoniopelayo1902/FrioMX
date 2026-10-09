@@ -5,15 +5,11 @@
   "private": true,
   "scripts": {
     "start": "node server.js",
-    "dev": "API_PROXY_TARGET=http://localhost:3000 node server.js",
-    "build:css": "tailwindcss -i ./public/styles/input.css -o ./public/styles/output.css --watch"
+    "dev": "API_PROXY_TARGET=http://localhost:3000 node server.js"
   },
   "license": "ISC",
   "dependencies": {
     "express": "4.22.3",
     "http-proxy-middleware": "3.0.7"
-  },
-  "devDependencies": {
-    "tailwindcss": "3.4.19"
   }
 }

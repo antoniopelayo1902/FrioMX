@@ -1,339 +1,146 @@
-document.addEventListener('DOMContentLoaded', () => {
-    loadProfile();
-    initializeProfileImageHandlers();
-});
+// FrioMx: perfil (nombre, correo y contraseña).
+(function () {
+    'use strict';
+    const F = window.FrioMx;
+    const UI = window.FrioUI;
+    const $ = (id) => document.getElementById(id);
 
-function loadProfile() {
-    const xhr = new XMLHttpRequest();
-    const token = localStorage.getItem('token');
-    const userId = localStorage.getItem('userId');
-    
-    if (!token || !userId) {
-        window.location.href = '/logIn';
-        return;
+    let profile = null;
+
+    function apply(p) {
+        profile = p;
+        document.querySelectorAll('[data-user-name]').forEach((n) => { n.textContent = p.name; });
+        document.querySelectorAll('[data-user-initial]').forEach((n) => { n.textContent = F.initials(p.name); });
+        $('side-email').textContent = p.email;
+        $('side-age').textContent = `${p.age} años`;
+        if (typeof p.balance === 'number') F.setBalance(p.balance, { animate: false });
+        if (!editing) $('name').value = p.name;
     }
-    
-    var url = getApiUrl(API_CONFIG.ENDPOINTS.PROFILE);
 
-    xhr.open('GET', url, true);
-    xhr.setRequestHeader('Content-Type', 'application/json');
-    xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+    // ---------- Nombre (edición en línea) ----------
+    const nameForm = $('name-form');
+    const nameInput = $('name');
+    const editBtn = $('name-edit');
+    const saveBtn = $('name-save');
+    const cancelBtn = $('name-cancel');
+    let editing = false;
 
-    
-    xhr.onload = function() {
-        if (xhr.status != 200) {
-            alert(xhr.status + ': ' + xhr.statusText); 
-        } else { 
-            if (xhr.status === 200) {
-                let usernameField = document.querySelector('#account-input-username');
-                let emailField = document.querySelector('#account-input-email');
-                let passwordField = document.querySelector('#account-input-password');
-                let ageField = document.querySelector('#account-input-age');
-                let usernameBoldField = document.querySelector('#account-bold-username');
-
-                let data = JSON.parse(xhr.responseText);
-                usernameField.value = data.name;
-                usernameField.dataset.prev = data.name;
-
-                // La API nunca regresa la contraseña: el campo solo sirve para escribir una nueva.
-                passwordField.value = '';
-                passwordField.dataset.prev = '';
-                passwordField.placeholder = 'Nueva contraseña';
-
-                emailField.value = data.email;
-                emailField.dataset.prev = data.email;
-
-                ageField.innerHTML = data.age + " " + "años";
-                usernameBoldField.innerHTML = data.name;
-                
-                loadProfileImage();
-            }
-        }
-    };
-    xhr.send();
-}
-
-function confirm(component) {
-    let components = getFields(component);
-    let field = components[0];
-    let confirm = components[1];
-    let cancel = components[2];
-    let span = components[3];
-
-    field.disabled = true;
-    field.classList.add('account-input');
-    field.classList.remove('editing');
-
-    span.style.display = 'block';
-    confirm.style.display = 'none';
-    cancel.style.display = 'none';
-
-    if (updateField(component, field.value)) {
-        field.dataset.prev = component === 'password' ? '' : field.value;
+    function setEditing(on) {
+        editing = on;
+        nameInput.readOnly = !on;
+        editBtn.hidden = on;
+        saveBtn.hidden = !on;
+        cancelBtn.hidden = !on;
+        UI.clearErrors(nameForm);
+        if (on) { nameInput.focus(); nameInput.select(); } else if (profile) nameInput.value = profile.name;
     }
-    if (component === 'password' || field.value !== field.dataset.prev) {
-        field.value = field.dataset.prev;
-    }
-}
-
-function updateField(field, newValue) {
-    const xhr = new XMLHttpRequest();
-    const token = localStorage.getItem('token');
-    let ok = false;
-
-    let data = JSON.stringify({ field: field, newValue: newValue });
-
-    xhr.open('PUT', getApiUrl(API_CONFIG.ENDPOINTS.PROFILE), false);
-    xhr.setRequestHeader('Content-Type', 'application/json');
-    xhr.setRequestHeader('Authorization', `Bearer ${token}`);
-
-    
-    xhr.onload = function() {
-        let body = {};
-        try { body = JSON.parse(xhr.responseText); } catch (e) { /* respuesta vacía */ }
-        if (xhr.status !== 200) {
-            Swal.fire({ icon: 'error', title: 'No se guardó el cambio', text: body.error || 'Intenta de nuevo' });
-            return;
-        }
-        ok = true;
-        document.querySelector('#account-bold-username').innerHTML = body.name;
-        document.querySelector('#textProf').innerHTML = body.name;
-        if (field === 'password') {
-            Swal.fire({ icon: 'success', title: 'Contraseña actualizada', timer: 1500, showConfirmButton: false });
-        }
-    };
-    xhr.send(data);
-    return ok;
-}
-
-function cancel(component) {
-    let components = getFields(component);
-    let field = components[0];
-    let confirm = components[1];
-    let cancel = components[2];
-    let span = components[3];
-
-    field.disabled = true;
-    field.classList.add('account-input');
-    field.classList.remove('editing');
-
-    span.style.display = 'block';
-    confirm.style.display = 'none';
-    cancel.style.display = 'none';
-
-    field.value = field.dataset.prev;
-}
-
-function getFields(component) {
-    let field = document.querySelector(`#account-input-${component}`);
-    let confirm = document.querySelector(`#account-input-${component}-confirm`);
-    let cancel = document.querySelector(`#account-input-${component}-cancel`);
-    let span = document.querySelector(`#account-input-${component}-span`);
-
-    let components = [];
-    components.push(field);
-    components.push(confirm);
-    components.push(cancel);
-    components.push(span);
-
-    return components;
-}
-
-function edit(component) {
-    let components = getFields(component);
-    let field = components[0];
-    let confirm = components[1];
-    let cancel = components[2];
-    let span = components[3];
-
-    field.disabled = false;
-    field.classList.remove('account-input');
-    field.classList.add('editing');
-
-    span.style.display = 'none';
-    confirm.style.display = 'block';
-    cancel.style.display = 'block';
-}
-
-function initializeProfileImageHandlers() {
-    const fileInput = document.getElementById('profile-image-input');
-    const deleteBtn = document.getElementById('delete-profile-image-btn');
-    
-    fileInput.addEventListener('change', handleProfileImageUpload);
-    deleteBtn.addEventListener('click', handleProfileImageDelete);
-}
-
-function loadProfileImage() {
-    const xhr = new XMLHttpRequest();
-    const token = localStorage.getItem('token');
-    
-    xhr.open('GET', getApiUrl(API_CONFIG.ENDPOINTS.PROFILE_IMAGE), true);
-    xhr.setRequestHeader('Authorization', `Bearer ${token}`);
-    
-    xhr.onload = function() {
-        if (xhr.status === 200) {
-            const data = JSON.parse(xhr.responseText);
-            if (data.success && data.profileImage) {
-                updateProfileImageDisplay(data.profileImage);
-                document.getElementById('delete-profile-image-btn').style.display = 'block';
-            }
-        }
-    };
-    xhr.send();
-}
-
-function handleProfileImageUpload(event) {
-    const file = event.target.files[0];
-    
-    if (!file) return;
-    
-    const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
-    if (!validTypes.includes(file.type)) {
-        Swal.fire({
-            icon: 'error',
-            title: 'Tipo de archivo no permitido',
-            text: 'Solo se aceptan imágenes JPEG, JPG, PNG y WEBP'
-        });
-        event.target.value = '';
-        return;
-    }
-    
-    const maxSize = 5 * 1024 * 1024;
-    if (file.size > maxSize) {
-        Swal.fire({
-            icon: 'error',
-            title: 'Archivo demasiado grande',
-            text: 'Tamaño máximo: 5MB'
-        });
-        event.target.value = '';
-        return;
-    }
-    
-    uploadProfileImageToServer(file);
-}
-
-function uploadProfileImageToServer(file) {
-    const formData = new FormData();
-    formData.append('profileImage', file);
-    
-    const xhr = new XMLHttpRequest();
-    const token = localStorage.getItem('token');
-    
-    xhr.open('POST', getApiUrl(API_CONFIG.ENDPOINTS.PROFILE_UPLOAD), true);
-    xhr.setRequestHeader('Authorization', `Bearer ${token}`);
-    
-    xhr.onload = function() {
-        if (xhr.status === 200) {
-            const data = JSON.parse(xhr.responseText);
-            if (data.success) {
-                updateProfileImageDisplay(data.profileImage);
-                document.getElementById('delete-profile-image-btn').style.display = 'block';
-                Swal.fire({
-                    icon: 'success',
-                    title: '¡Imagen actualizada!',
-                    text: 'Tu imagen de perfil se ha actualizado correctamente',
-                    timer: 2000,
-                    showConfirmButton: false
-                });
-            } else {
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Error',
-                    text: data.error
-                });
-            }
-        } else {
-            let body = {};
-            try { body = JSON.parse(xhr.responseText); } catch (e) { /* respuesta vacía */ }
-            Swal.fire({
-                icon: 'info',
-                title: 'Foto de perfil',
-                text: body.error || 'Error al subir la imagen de perfil'
-            });
-        }
-        document.getElementById('profile-image-input').value = '';
-    };
-    
-    xhr.onerror = function() {
-        Swal.fire({
-            icon: 'error',
-            title: 'Error de conexión',
-            text: 'No se pudo conectar con el servidor'
-        });
-        document.getElementById('profile-image-input').value = '';
-    };
-    
-    xhr.send(formData);
-}
-
-function handleProfileImageDelete() {
-    Swal.fire({
-        title: '¿Estás seguro?',
-        text: '¿Quieres eliminar tu imagen de perfil?',
-        icon: 'warning',
-        showCancelButton: true,
-        confirmButtonColor: '#d33',
-        cancelButtonColor: '#3085d6',
-        confirmButtonText: 'Sí, eliminar',
-        cancelButtonText: 'Cancelar'
-    }).then((result) => {
-        if (result.isConfirmed) {
-            const xhr = new XMLHttpRequest();
-            const token = localStorage.getItem('token');
-            
-            xhr.open('DELETE', getApiUrl(API_CONFIG.ENDPOINTS.PROFILE_DELETE), true);
-            xhr.setRequestHeader('Authorization', `Bearer ${token}`);
-            
-            xhr.onload = function() {
-                if (xhr.status === 200) {
-                    const data = JSON.parse(xhr.responseText);
-                    if (data.success) {
-                        updateProfileImageDisplay('/assets/images/pos.jpg');
-                        document.getElementById('delete-profile-image-btn').style.display = 'none';
-                        Swal.fire({
-                            icon: 'success',
-                            title: '¡Eliminada!',
-                            text: 'Tu imagen de perfil ha sido eliminada',
-                            timer: 2000,
-                            showConfirmButton: false
-                        });
-                    } else {
-                        Swal.fire({
-                            icon: 'error',
-                            title: 'Error',
-                            text: data.error
-                        });
-                    }
-                } else {
-                    Swal.fire({
-                        icon: 'error',
-                        title: 'Error',
-                        text: 'Error al eliminar la imagen de perfil'
-                    });
-                }
-            };
-            
-            xhr.onerror = function() {
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Error de conexión',
-                    text: 'No se pudo conectar con el servidor'
-                });
-            };
-            
-            xhr.send();
+    editBtn.addEventListener('click', () => setEditing(true));
+    cancelBtn.addEventListener('click', () => { setEditing(false); editBtn.focus(); });
+    nameInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && editing) { e.preventDefault(); setEditing(false); editBtn.focus(); }
+    });
+    nameInput.addEventListener('dblclick', () => { if (!editing) setEditing(true); });
+    nameForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        if (!editing) return;
+        if (!UI.check(nameForm, [[nameInput, UI.rules.name]])) return;
+        const value = nameInput.value.trim();
+        if (profile && value === profile.name) { setEditing(false); return; }
+        UI.busy(saveBtn, true, 'Guardando…');
+        try {
+            const p = await F.api('/user/profile', { method: 'PUT', body: { field: 'username', newValue: value } });
+            UI.busy(saveBtn, false);
+            editing = false;
+            apply(p);
+            setEditing(false);
+            F.toast('Nombre actualizado.', 'success');
+        } catch (err) {
+            UI.busy(saveBtn, false);
+            UI.serverError(nameForm, err, { name: nameInput });
         }
     });
-}
 
-function updateProfileImageDisplay(imageUrl) {
-    const profileImage = document.getElementById('profile-image-display');
-    if (profileImage) {
-        profileImage.src = imageUrl;
-    }
-    
-    const navProfileImages = document.querySelectorAll('.h-6.w-auto.rounded-full');
-    navProfileImages.forEach(img => {
-        img.src = imageUrl;
+    // ---------- Correo ----------
+    const emailForm = $('email-form');
+    const newEmail = $('new-email');
+    const emailCurrent = $('email-current');
+    emailForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const ok = UI.check(emailForm, [
+            [newEmail, (v) => UI.rules.email(v) || (profile && v.trim().toLowerCase() === profile.email ? 'Ese ya es tu correo actual.' : '')],
+            [emailCurrent, UI.rules.required('Escribe tu contraseña actual.')],
+        ]);
+        if (!ok) return;
+        const btn = $('email-save');
+        UI.busy(btn, true, 'Guardando…');
+        try {
+            const p = await F.api('/user/profile', { method: 'PUT', body: { field: 'email', newValue: newEmail.value.trim(), currentPassword: emailCurrent.value } });
+            UI.busy(btn, false);
+            apply(p);
+            emailForm.reset();
+            F.toast(`Correo actualizado. Desde ahora inicia sesión con ${p.email}.`, 'success', 6000);
+        } catch (err) {
+            UI.busy(btn, false);
+            UI.serverError(emailForm, err, { email: newEmail, current: emailCurrent });
+        }
     });
-}
+
+    // ---------- Contraseña ----------
+    const pwForm = $('pw-form');
+    const pwCurrent = $('pw-current');
+    const pwNew = $('pw-new');
+    const pwConfirm = $('pw-confirm');
+    pwForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const ok = UI.check(pwForm, [
+            [pwCurrent, UI.rules.required('Escribe tu contraseña actual.')],
+            [pwNew, (v) => UI.rules.password(v) || (v && v === pwCurrent.value ? 'La contraseña nueva debe ser distinta de la actual.' : '')],
+            [pwConfirm, (v) => (!v ? 'Vuelve a escribir la contraseña nueva.' : v !== pwNew.value ? 'Las contraseñas no coinciden.' : '')],
+        ]);
+        if (!ok) return;
+        const btn = $('pw-save');
+        UI.busy(btn, true, 'Guardando…');
+        try {
+            const p = await F.api('/user/profile', { method: 'PUT', body: { field: 'password', newValue: pwNew.value, currentPassword: pwCurrent.value } });
+            // El token anterior deja de servir: se guarda el nuevo para seguir dentro.
+            if (p.token) F.setToken(p.token);
+            UI.busy(btn, false);
+            pwForm.reset();
+            F.toast('Contraseña actualizada. Cerramos tus sesiones en otros dispositivos.', 'success', 6000);
+        } catch (err) {
+            UI.busy(btn, false);
+            UI.serverError(pwForm, err, { password: pwNew, current: pwCurrent });
+        }
+    });
+
+    UI.passwordToggles(document.querySelector('.settings'));
+    [nameForm, emailForm, pwForm].forEach(UI.liveClear);
+    $('logout').addEventListener('click', () => F.logout());
+
+    // Un solo intento compartido con app.js (FrioMx.loadMe) y un solo estado de error con Reintentar.
+    const errBox = $('profile-error');
+    const retryBtn = $('profile-retry');
+    async function load() {
+        errBox.hidden = true;
+        editBtn.disabled = true;
+        try {
+            apply(await F.loadMe());
+            document.querySelector('.profile-side').classList.remove('is-error');
+            editBtn.disabled = false;
+        } catch (err) {
+            if (err.status === 401) return;
+            $('profile-error-msg').textContent = 'No pudimos cargar tu perfil. ' + err.message;
+            ['side-name', 'side-email', 'side-age'].forEach((id) => { if ($(id).textContent === '…') $(id).textContent = '—'; });
+            document.querySelectorAll('.profile-side [data-balance]').forEach((n) => { if (n.textContent === '…') n.textContent = '—'; });
+            document.querySelector('.profile-side').classList.add('is-error');
+            errBox.hidden = false;
+        }
+    }
+    retryBtn.addEventListener('click', async () => {
+        UI.busy(retryBtn, true, 'Cargando…');
+        await load();
+        UI.busy(retryBtn, false);
+        if (errBox.hidden) editBtn.focus();
+    });
+    load();
+})();

@@ -1,189 +1,141 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="es" data-auth="public" data-page="rules">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Reglas</title>
-    <link rel="stylesheet" href="styles/output.css">
-    <link rel="icon" href="assets/images/icon.png" type="image/png">
-    <link rel="stylesheet" href="styles/index.css">
-    <script src="scripts/config.js"></script>
-    <script src="scripts/navbar.js"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Reglas · FrioMx</title>
+    <link rel="icon" href="/assets/images/icon.png" type="image/png">
+    <link rel="stylesheet" href="/styles/app.css">
+    <link rel="stylesheet" href="/styles/pages.css">
+    <!-- Pública: las reglas se pueden leer antes de registrarse. Con sesión se muestra el menú de la app. -->
+    <script src="/scripts/hybrid.js"></script>
+    <script src="/scripts/app.js"></script>
 </head>
 <body>
-
-
-<div class="h-screen w-full bg-white relative flex overflow-hidden ">
-
-    <aside id="side" class="h-full w-16 flex flex-col space-y-10 items-center justify-center relative  text-white ">
-
-        <div class="group relative h-10 w-10 flex items-center justify-center rounded-lg cursor-pointer hover:text-gray-800 hover:bg-white  hover:duration-300 hover:ease-linear focus:bg-white">
-            <button onclick="goToIndex()">
-                <svg xmlns="http://www.w3.org/2000/svg"  class="h-6 w-6" viewBox="0 0 448 512" fill="currentColor"><path fill-rule="evenodd"   d="M248 24c0-13.3-10.7-24-24-24s-24 10.7-24 24V56H168c-13.3 0-24 10.7-24 24s10.7 24 24 24h32v40H59.6C26.7 144 0 170.7 0 203.6c0 8.2 1.7 16.3 4.9 23.8L59.1 352h52.3L49 208.2c-.6-1.5-1-3-1-4.6c0-6.4 5.2-11.6 11.6-11.6H224 388.4c6.4 0 11.6 5.2 11.6 11.6c0 1.6-.3 3.2-1 4.6L336.5 352h52.3l54.2-124.6c3.3-7.5 4.9-15.6 4.9-23.8c0-32.9-26.7-59.6-59.6-59.6H248V104h32c13.3 0 24-10.7 24-24s-10.7-24-24-24H248V24zM101.2 432H346.8l16.6 32H84.7l16.6-32zm283.7-30.7c-5.5-10.6-16.5-17.3-28.4-17.3H91.5c-12 0-22.9 6.7-28.4 17.3L36.6 452.5c-3 5.8-4.6 12.2-4.6 18.7C32 493.8 50.2 512 72.8 512H375.2c22.5 0 40.8-18.2 40.8-40.8c0-6.5-1.6-12.9-4.6-18.7l-26.5-51.2z" clip-rule="evenodd" /></svg>
-            </button>
-            <span class="absolute -top-6 left-[50%] -translate-x-[50%]
-            z-20 origin-left scale-0 px-1.5 rounded-lg border
-              border-gray-300 bg-white py-1 text-sm font-bold
-            shadow-md transition-all duration-300 ease-in-out
-            group-hover:scale-100">Juegos<span></span></span>
+    <header class="public-top">
+        <a class="brand" href="/" aria-label="FrioMx, inicio">
+            <img src="/assets/images/icon.png" alt="" width="30" height="30"><span>Frio<b>Mx</b></span>
+        </a>
+        <div class="actions">
+            <a class="btn btn-ghost" href="/logIn">Iniciar sesión</a>
+            <a class="btn btn-primary" href="/register">Crear cuenta</a>
         </div>
+    </header>
 
-
-        <div class="group relative h-10 w-10 flex items-center justify-center rounded-lg cursor-pointer hover:text-gray-800 hover:bg-white  hover:duration-300 hover:ease-linear focus:bg-white">
-            <button onclick="goToInfo()">
-                <svg xmlns="http://www.w3.org/2000/svg"  class="h-6 w-6" viewBox="0 0 192 512" fill="currentColor"><path fill-rule="evenodd" d="M48 80a48 48 0 1 1 96 0A48 48 0 1 1 48 80zM0 224c0-17.7 14.3-32 32-32H96c17.7 0 32 14.3 32 32V448h32c17.7 0 32 14.3 32 32s-14.3 32-32 32H32c-17.7 0-32-14.3-32-32s14.3-32 32-32H64V256H32c-17.7 0-32-14.3-32-32z" clip-rule="evenodd" /></svg>
-            </button>
-            <span class="absolute -top-6 left-[50%] -translate-x-[50%]
-            z-20 origin-left scale-0 px-2 rounded-lg border
-            border-gray-300 bg-white py-1 text-sm font-bold
-            shadow-md transition-all duration-300 ease-in-out
-            group-hover:scale-100">Info<span></span></span>
-        </div>
-
-        <div class="group relative h-10 w-10 flex items-center justify-center rounded-lg cursor-pointer hover:text-gray-800 hover:bg-white  hover:duration-300 hover:ease-linear focus:bg-white">
-            <button onclick="goToRules()">
-                <svg xmlns="http://www.w3.org/2000/svg"  class="h-6 w-6" viewBox="0 0 640 512" fill="currentColor"><path fill-rule="evenodd" d="M384 32H512c17.7 0 32 14.3 32 32s-14.3 32-32 32H398.4c-5.2 25.8-22.9 47.1-46.4 57.3V448H512c17.7 0 32 14.3 32 32s-14.3 32-32 32H320 128c-17.7 0-32-14.3-32-32s14.3-32 32-32H288V153.3c-23.5-10.3-41.2-31.6-46.4-57.3H128c-17.7 0-32-14.3-32-32s14.3-32 32-32H256c14.6-19.4 37.8-32 64-32s49.4 12.6 64 32zm55.6 288H584.4L512 195.8 439.6 320zM512 416c-62.9 0-115.2-34-126-78.9c-2.6-11 1-22.3 6.7-32.1l95.2-163.2c5-8.6 14.2-13.8 24.1-13.8s19.1 5.3 24.1 13.8l95.2 163.2c5.7 9.8 9.3 21.1 6.7 32.1C627.2 382 574.9 416 512 416zM126.8 195.8L54.4 320H199.3L126.8 195.8zM.9 337.1c-2.6-11 1-22.3 6.7-32.1l95.2-163.2c5-8.6 14.2-13.8 24.1-13.8s19.1 5.3 24.1 13.8l95.2 163.2c5.7 9.8 9.3 21.1 6.7 32.1C242 382 189.7 416 126.8 416S11.7 382 .9 337.1z" clip-rule="evenodd" /></svg>
-            </button>
-            <span class="absolute -top-6 left-[50%] -translate-x-[50%]
-            z-20 origin-left scale-0 px-2 rounded-lg border
-            border-gray-300 bg-white py-1 text-sm font-bold
-            shadow-md transition-all duration-300 ease-in-out
-            group-hover:scale-100">Reglas<span></span></span>
-        </div>
-
-        <div class="group relative h-10 w-10 flex items-center justify-center rounded-lg cursor-pointer hover:text-gray-800 hover:bg-white  hover:duration-300 hover:ease-linear focus:bg-white">
-            <button onclick="goToProfile()">
-                <svg xmlns="http://www.w3.org/2000/svg"  class="h-6 w-6" viewBox="0 0 448 512" fill="currentColor"><path fill-rule="evenodd" d="M224 256A128 128 0 1 1 224 0a128 128 0 1 1 0 256zM209.1 359.2l-18.6-31c-6.4-10.7 1.3-24.2 13.7-24.2H224h19.7c12.4 0 20.1 13.6 13.7 24.2l-18.6 31 33.4 123.9 36-146.9c2-8.1 9.8-13.4 17.9-11.3c70.1 17.6 121.9 81 121.9 156.4c0 17-13.8 30.7-30.7 30.7H285.5c-2.1 0-4-.4-5.8-1.1l.3 1.1H168l.3-1.1c-1.8 .7-3.8 1.1-5.8 1.1H30.7C13.8 512 0 498.2 0 481.3c0-75.5 51.9-138.9 121.9-156.4c8.1-2 15.9 3.3 17.9 11.3l36 146.9 33.4-123.9z" clip-rule="evenodd" /></svg>
-            </button>
-
-            <span class="absolute -top-6 left-[50%] -translate-x-[50%]
-            z-20 origin-left scale-0 px-2 rounded-lg border
-            border-gray-300 bg-white py-1 text-sm font-bold
-            shadow-md transition-all duration-300 ease-in-out
-            group-hover:scale-100">Perfil<span></span></span>
-        </div>
-
-        <div class="group relative h-10 w-10 flex items-center justify-center rounded-lg cursor-pointer hover:text-gray-800 hover:bg-white  hover:duration-300 hover:ease-linear focus:bg-white">
-            <button onclick="goToExit()">
-                <svg xmlns="http://www.w3.org/2000/svg"  class="h-6 w-6" viewBox="0 0 512 512" fill="currentColor"><path fill-rule="evenodd"   d="M256 48a208 208 0 1 1 0 416 208 208 0 1 1 0-416zm0 464A256 256 0 1 0 256 0a256 256 0 1 0 0 512zM175 175c-9.4 9.4-9.4 24.6 0 33.9l47 47-47 47c-9.4 9.4-9.4 24.6 0 33.9s24.6 9.4 33.9 0l47-47 47 47c9.4 9.4 24.6 9.4 33.9 0s9.4-24.6 0-33.9l-47-47 47-47c9.4-9.4 9.4-24.6 0-33.9s-24.6-9.4-33.9 0l-47 47-47-47c-9.4-9.4-24.6-9.4-33.9 0z" clip-rule="evenodd" /></svg>
-            </button>
-            <span class="absolute -top-6 left-[50%] -translate-x-[50%]
-            z-20 origin-left scale-0 px-2 rounded-lg border
-            border-gray-300 bg-white py-1 text-sm font-bold
-            shadow-md transition-all duration-300 ease-in-out
-            group-hover:scale-100">Salir<span></span></span>
-        </div>
-    </aside>
-
-
-    <div class="w-full h-full flex flex-col justify-between">
-        <header id="nav" class="h-20 w-full flex items-center relative justify-between px-5 space-x-10 dark:bg-[#1a2c38] ">
-            <div id="mainText" class="invisible px-3 dark:text-white text-6xl ">
-                Frio
-            </div>
-
-            <div class=" flex flex-none ">
-                <img src="/assets/images/full_logo.png" alt="iconOnMainPage">
-            </div>
-
-            <div class="flex flex-shrink-0 items-center justify-center space-x-4 text-white">
+    <main id="main" class="main">
+        <div class="content">
+            <div class="page-head">
                 <div>
-
-                </div>
-                <div id="btnProf" class="flex px-3 space-x-3">
-                    <button class="btn" onclick="goToProfile()">
-                        <a id="textProf"></a>
-                    </button>
-                    <button class="rounded-full " onclick="goToProfile()">
-                        <img class="h-6 w-auto rounded-full" src="/assets/images/pos.jpg" alt=""/>
-                    </button>
+                    <h1>Reglas de los juegos</h1>
+                    <p>Cómo se juega cada uno y cuántas fichas ganas. Todo es con fichas virtuales.</p>
                 </div>
             </div>
-        </header>
+            <nav class="toc" aria-label="Ir a un juego">
+                <a class="btn btn-sm" href="#ruleta">Ruleta</a>
+                <a class="btn btn-sm" href="#hilo">Hi-Lo</a>
+                <a class="btn btn-sm" href="#minas">Minas</a>
+                <a class="btn btn-sm" href="#responsable">Juego responsable</a>
+            </nav>
 
-        <main id="mains" class="max-w-full h-full flex relative overflow-y-auto">
-            <div>
-                <div class="flex min-h-screen items-center justify-center">
-                    <section class="px-40">
-                        <div class="mb-24 text-center">
-                            <h1 class="block antialiased font-sans relative my-5 text-center text-4xl font-bold leading-tight tracking-normal text-white md:text-5xl"> Como jugar </h1>
-                            <p class="block antialiased font-sans relative my-5 mx-auto text-center text-lg font-normal leading-relaxed tracking-normal text-white md:text-xl lg:max-w-4xl">
-                                Informacion de los juegos y el como jugar!
-                            </p>
-                        </div>
-                        <div class="grid grid-cols-12 justify-items-center">
-                            <div class="col-span-12 lg:col-start-4 lg:col-span-6 text-justify">
-                                <h5 class="block antialiased tracking-normal font-sans text-xl leading-snug text-inherit mt-6 mb-1 font-semibold !text-white"> ¿Cómo es la ganancia en los juegos? </h5>
-                                <div class="block antialiased font-sans text-base leading-relaxed mb-4 font-normal text-white ">
-                                    La ganancia de los juegos dependerá bastante en el juego que te encuentras y su modalidad, donde sus rubros te aproximarán a una ganancia esperada, siendo que si seleccionas más de uno suben tus probabilidades de ganar; sin embargo, baja la ganancia obtenida.
-                                </div>
-                                <hr class="my-6 border-blue-gray-50">
-                                <h5 class="block antialiased tracking-normal font-sans text-xl leading-snug text-inherit mt-6 mb-1 font-semibold !text-white"> ¿Como jugar ruleta? </h5>
-                                <div  class="block antialiased font-sans text-base leading-relaxed mb-4 font-normal text-white ">
-                                    El juego de la ruleta tiene ciertas maneras de jugarla y todas son similares, pero al mismo tiempo diferentes, por ello mismo aquí te mencionaremos algunas formas de jugarla e información general de ella:
-                                    <br>
-                                    <br>
-                                    1.- Puedes jugarla solo buscando apostar por colores, siendo verde, rojo o negro de tu elección, o bien podrías elegir más de uno; sin embargo, se tiene que tomar en cuenta que mientras más elecciones del mismo tipo tomes será menos la ganancia que obtendrás.
-                                    <br>
-                                    <br>
-                                    2.- Puedes jugar la ruleta con base en números pares o impares, de la misma manera si tomas más de uno del mismo rubro terminará anulando la ganancia y terminarás tablas.
-                                    <br>
-                                    <br>
-                                    3.- La otra manera de jugarla, la ruleta es con base a números entre la 1.ª, 2.ª y 3.ª tercia de números, de igual manera mientras más selecciones menor la ganancia.
-                                    <br>
-                                    <br>
-                                    Con estos 3 tipos de juegos cabe mencionar que estos juegos se pueden combinar, donde si eliges tomar una combinación de los 3 diferentes tipos de juegos podrás hacerlo, pero la ganancia llegará a variar dependiendo de las elecciones.
-                                </div>
-                                <hr class="my-6 border-blue-gray-50">
-                                <h5 class="block antialiased tracking-normal font-sans text-xl leading-snug text-inherit mt-6 mb-1 font-semibold !text-white"> ¿Como jugar Hi-Lo? </h5>
-                                <div  class="block antialiased font-sans text-base leading-relaxed mb-4 font-normal text-white ">
-                                    El juego Hi-Lo consiste en que, cuando se te muestra una carta tu tienes que adivinar si el numero de la siguiente carta será mas grande o mas pequeño que el de la carta actual. A continuacion mostramos los pasos de como jugar:
-                                    <br>
-                                    <br>
-                                    1.- Ingresas la cantidad a apostar y presionas "Repartir". Se te cobra la apuesta y se muestra una carta del 2 a la Q.
-                                    <br>
-                                    <br>
-                                    2.- Eliges si la siguiente carta será mayor o menor que la actual. Si las cartas son iguales, pierdes.
-                                    <br>
-                                    <br>
-                                    3.- Si ganas, el pago depende de qué tan difícil era acertar: entre menos cartas te hacían ganar, más pagas. Si pierdes, pierdes lo que apostaste.
-                                    <br>
-                                    <br>
-                                    Después de cada ronda puedes volver a repartir.
-                                </div>
-                                <hr class="my-6 border-blue-gray-50">
-                                <h5 class="block antialiased tracking-normal font-sans text-xl leading-snug text-inherit mt-6 mb-1 font-semibold !text-white"> ¿Como jugar mines? </h5>
-                                <div  class="block antialiased font-sans text-base leading-relaxed mb-4 font-normal text-white ">
-                                    El juego de mines consiste en el juego de buscaminas donde tienes que ir seleccionando casillas hasta que encuentres todas o te topes una bomba:
-                                    <br>
-                                    <br>
-                                    1.- Deberas primero ingresar una cantidad para poder iniciar, la cantidad tiene que ser respecto a tu balance y tiene que un valor positivo.
-                                    <br>
-                                    <br>
-                                    2.- Con ello, podras empezar a seleccionar casillas y podras marcar con bandera maximo 5 casillas. En estas banderas te bloquearan dar click en la casilla.
-                                    <br>
-                                    <br>
-                                    3.- Ganaras hasta que descubras las 20 casillas o perderas en cuando te encuentres a una bomba.
-                                    <br>
-                                    <br>
-                                    Las ganancias del juego son respecto al descubrir todas las casillas que no tengan bomba, si lo logras ganaras x20 lo apostado.
-                                </div>
+            <div class="stack">
+                <section class="card" id="ruleta" aria-labelledby="r-title">
+                    <h2 id="r-title"><span class="game-ico ico-roulette" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20m0 3a7 7 0 1 1 0 14 7 7 0 0 1 0-14m0 4a3 3 0 1 0 0 6 3 3 0 0 0 0-6"/></svg></span>Ruleta</h2>
+                    <p>La rueda tiene <strong>37 casillas</strong>: los números del 1 al 36 (la mitad rojos y la mitad negros) y el <strong>0, que es verde</strong>. Pones tus fichas, la rueda gira y el número donde cae la bola decide qué apuestas ganan.</p>
+                    <h3>Cómo jugar</h3>
+                    <ol>
+                        <li>Elige una ficha (10, 50, 100…) y toca dónde quieres apostar.</li>
+                        <li>Puedes poner varias apuestas en la misma tirada: por ejemplo Rojo y Par a la vez (hasta 20 apuestas y 10,000 fichas en total).</li>
+                        <li>Toca Girar. Cada apuesta gana o pierde por separado.</li>
+                    </ol>
+                    <h3>¿Cuánto gano? (apostando 10 fichas)</h3>
+                    <div class="table-wrap">
+                        <table class="table pay-table">
+                            <thead><tr><th scope="col">Apuesta</th><th scope="col">Aciertas si sale…</th><th scope="col" class="n">Ganas</th><th scope="col" class="n">Recibes</th></tr></thead>
+                            <tbody>
+                                <tr><td>Rojo o Negro</td><td>Un número de ese color</td><td class="num">+10</td><td class="num">20</td></tr>
+                                <tr><td>Par o Impar</td><td>Un número par o impar (el 0 no cuenta)</td><td class="num">+10</td><td class="num">20</td></tr>
+                                <tr><td>Grupo de 12</td><td>Del 1 al 12, del 13 al 24 o del 25 al 36</td><td class="num">+20</td><td class="num">30</td></tr>
+                                <tr><td>Verde</td><td>El 0</td><td class="num">+350</td><td class="num">360</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <p class="table-note">“Recibes” son tus 10 fichas de regreso más lo que ganas. Si pierdes, pierdes las 10.</p>
+                    <p><strong>Ejemplo:</strong> pones 10 a Rojo y 10 al grupo del 1 al 12. Sale el 5 rojo: ganan las dos y recibes 20 + 30 = 50 fichas. Si sale el 20 negro, pierdes las 20.</p>
+                    <div class="callout"><p><strong>Ojo con el 0:</strong> si sale el 0 pierden Rojo, Negro, Par, Impar y los grupos de 12. Solo gana quien apostó a Verde.</p></div>
+                </section>
 
-                            </div>
-                        </div>
-                    </section>
-                </div>
+                <section class="card" id="hilo" aria-labelledby="h-title">
+                    <h2 id="h-title"><span class="game-ico ico-hilo" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3h9a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2m13 3 1.5.5a2 2 0 0 1 1.2 2.5l-3.7 11"/></svg></span>Hi-Lo</h2>
+                    <p>Ves una carta y adivinas si la siguiente será <strong>mayor</strong> o <strong>menor</strong>. Solo se usan las cartas del <strong>2 a la Q</strong>: 2, 3, 4, 5, 6, 7, 8, 9, 10, J (vale 11) y Q (vale 12). No hay Rey ni As.</p>
+                    <h3>Cómo jugar</h3>
+                    <ol>
+                        <li>Elige cuántas fichas apostar y toca Repartir.</li>
+                        <li>Sale la primera carta. Cada botón te dice cuánto recibes si aciertas.</li>
+                        <li>Elige Mayor o Menor. <strong>Si sale la misma carta, pierdes.</strong></li>
+                    </ol>
+                    <p>Mientras más difícil sea acertar, más ganas. La carta que te toca siempre va del 3 al J, así que siempre puedes elegir Mayor o Menor. La siguiente carta puede ser cualquiera del 2 a la Q.</p>
+                    <h3>¿Cuánto gano? (apostando 10 fichas, la carta es un 6)</h3>
+                    <div class="table-wrap">
+                        <table class="table pay-table">
+                            <thead><tr><th scope="col">Eliges</th><th scope="col">Aciertas con</th><th scope="col" class="n">Ganas</th><th scope="col" class="n">Recibes</th></tr></thead>
+                            <tbody>
+                                <tr><td>Mayor</td><td>7, 8, 9, 10, J o Q (6 de 11 cartas)</td><td class="num">+7</td><td class="num">17</td></tr>
+                                <tr><td>Menor</td><td>2, 3, 4 o 5 (4 de 11 cartas)</td><td class="num">+16</td><td class="num">26</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <p><strong>Ejemplo:</strong> sale un 6, apuestas 10 a Mayor y sale un 9: recibes 17 fichas (ganas 7). Si sale otro 6, pierdes las 10.</p>
+                </section>
+
+                <section class="card" id="minas" aria-labelledby="m-title">
+                    <h2 id="m-title"><span class="game-ico ico-mines" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 21a7 7 0 1 0 0-14 7 7 0 0 0 0 14m4.5-12.5 2-2M17 4l1.5-1.5M19 6.5l1.5-.5M8 13.5a3 3 0 0 1 3-3"/></svg></span>Minas</h2>
+                    <p>Un tablero de <strong>5×5</strong> (25 casillas) esconde <strong>5 minas</strong>. Cada casilla segura que destapas sube tu premio. Puedes cobrar cuando quieras; si pisas una mina, pierdes lo que apostaste.</p>
+                    <h3>Cómo jugar</h3>
+                    <ol>
+                        <li>Elige tu apuesta y toca Empezar partida.</li>
+                        <li>Destapa casillas una por una.</li>
+                        <li>Cuando quieras, toca Cobrar y te llevas el premio que marca el botón (necesitas al menos una casilla segura).</li>
+                    </ol>
+                    <h3>¿Cuánto gano? (apostando 10 fichas)</h3>
+                    <div class="table-wrap">
+                        <table class="table pay-table">
+                            <thead><tr><th scope="col">Casillas seguras</th><th scope="col" class="n">Ganas</th><th scope="col">Recibes al cobrar</th></tr></thead>
+                            <tbody>
+                                <tr><td>1</td><td class="num">+1</td><td class="num">11</td></tr>
+                                <tr><td>2</td><td class="num">+5</td><td class="num">15</td></tr>
+                                <tr><td>3</td><td class="num">+9</td><td class="num">19</td></tr>
+                                <tr><td>4</td><td class="num">+14</td><td class="num">24</td></tr>
+                                <tr><td>5</td><td class="num">+22</td><td class="num">32</td></tr>
+                                <tr><td>6</td><td class="num">+33</td><td class="num">43</td></tr>
+                                <tr><td>… hasta 20</td><td colspan="2">sigue subiendo, cada vez más rápido</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <p><strong>Ejemplo:</strong> apuestas 10, destapas 3 casillas seguras y cobras: recibes 19 fichas (ganas 9). Si en la cuarta pisas una mina, pierdes las 10.</p>
+                    <p>Si destapas las 20 casillas seguras, se cobra solo (máximo 1,000,000 fichas). Si sales de la página a media partida, la puedes retomar durante la siguiente hora.</p>
+                </section>
+
+                <section class="card" id="redondeo" aria-labelledby="red-title">
+                    <h2 id="red-title">Fichas enteras</h2>
+                    <p>Las fichas no se parten. Cuando un premio no da un número entero, se <strong>redondea hacia abajo</strong>: si te tocarían 17.4 fichas, recibes 17. El número que ves en el botón antes de jugar es exactamente lo que recibes.</p>
+                </section>
+
+                <section class="card" id="responsable" aria-labelledby="j-title">
+                    <h2 id="j-title">Fichas virtuales y juego responsable</h2>
+                    <ul>
+                        <li>FrioMx es un proyecto escolar. Las fichas <strong>no tienen valor real</strong>: no se compran, no se venden y no se cambian por dinero ni premios.</li>
+                        <li>Los resultados son al azar. Ningún truco garantiza ganar y, si juegas mucho, lo normal es terminar con un poco menos de fichas.</li>
+                        <li>Solo para mayores de 18 años. Si el juego con dinero real te está causando problemas, busca ayuda profesional.</li>
+                    </ul>
+                </section>
             </div>
-        </main>
+            <p class="more-links">¿Quién hizo FrioMx? <a href="/info">Acerca de FrioMx</a></p>
+        </div>
+    </main>
 
-
-
-
-    </div>
-
-</div>
-
+    <footer class="public-foot">
+        <span>FrioMx · Proyecto escolar del ITESO. Fichas virtuales, sin dinero real.</span>
+        <nav aria-label="Enlaces del pie"><a href="/">Inicio</a><a href="/info">Acerca de</a></nav>
+    </footer>
 </body>
-<script src="/scripts/indexLoading.js"></script>
-<script src="https://kit.fontawesome.com/549e1abe3e.js" crossorigin="anonymous"></script>
 </html>

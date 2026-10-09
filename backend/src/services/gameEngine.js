@@ -5,26 +5,64 @@ const { badRequest } = require('../lib/errors');
 
 const defaultRng = (min, max) => crypto.randomInt(min, max);
 
+// Las fichas son enteras: el pago es num/den redondeado hacia abajo. Es determinista, así el número
+// que se muestra antes de jugar es exactamente el que se paga (la casa nunca paga de más; con apuestas
+// muy chicas el redondeo puede comerse la ganancia y la interfaz lo avisa).
+function roundPayout(num, den) {
+    return Math.floor(num / den);
+}
+
+const HOUSE_NUM = 95; // el jugador recibe 95% del pago justo
+const HOUSE_DEN = 100;
+
 // ---------- Hi-lo ----------
 // Cartas del 2 al 12 (11 valores). El empate pierde.
-// Pago inversamente proporcional a la probabilidad de ganar (k/11), con 5% de ventaja de la casa.
+// Pago = apuesta * 0.95 * 11 / k, donde k es el número de cartas que ganan.
+
+const HILO_MIN = 2;
+const HILO_MAX = 12;
+const HILO_VALUES = HILO_MAX - HILO_MIN + 1;
 
 function hiloDraw(rng = defaultRng) {
-    return rng(2, 13);
+    return rng(HILO_MIN, HILO_MAX + 1);
+}
+
+// La carta visible nunca es 2 ni Q: con ellas solo hay una opción y casi no paga, y el jugador
+// ya apostó sin poder elegir. Del 3 al J siempre hay Mayor y Menor.
+function hiloDrawVisible(rng = defaultRng) {
+    return rng(HILO_MIN + 1, HILO_MAX);
 }
 
 function hiloWinningValues(oldCard, prediction) {
-    if (prediction === 'higher') return 12 - oldCard;
-    if (prediction === 'lower') return oldCard - 2;
+    if (prediction === 'higher') return HILO_MAX - oldCard;
+    if (prediction === 'lower') return oldCard - HILO_MIN;
     throw badRequest('prediction debe ser "higher" o "lower"');
+}
+
+// Multiplicador (2 decimales, para mostrar) de cada predicción con la carta visible; null si no puede ganar.
+function hiloPayout(bet, k) {
+    return roundPayout(bet * HOUSE_NUM * HILO_VALUES, HOUSE_DEN * k);
+}
+
+// Por cada predicción: multiplicador (2 decimales), probabilidad y pago exacto con esta apuesta; null si no puede ganar.
+function hiloMultipliers(oldCard, bet) {
+    const out = {};
+    for (const prediction of ['higher', 'lower']) {
+        const k = hiloWinningValues(oldCard, prediction);
+        out[prediction] = k === 0 ? null : {
+            multiplier: Math.floor((HOUSE_NUM * HILO_VALUES * 100) / (HOUSE_DEN * k)) / 100,
+            chance: k / HILO_VALUES,
+            ...(bet ? { payout: hiloPayout(bet, k) } : {}),
+        };
+    }
+    return out;
 }
 
 function hiloResolve(oldCard, newCard, prediction, bet) {
     const k = hiloWinningValues(oldCard, prediction);
     if (k === 0) throw badRequest('Esa predicción no puede ganar con esta carta');
     const won = prediction === 'higher' ? newCard > oldCard : newCard < oldCard;
-    // floor(bet * 0.95 * 11 / k) con aritmética entera exacta
-    const payout = won ? Math.floor((bet * 1045) / (100 * k)) : 0;
+    const payout = won ? hiloPayout(bet, k) : 0;
     return { won, payout, net: payout - bet };
 }
 
@@ -69,19 +107,27 @@ const ROULETTE_WHEEL = [
     { label: '26', color: 'Negro', parity: 'par', dozen: '3' },
 ];
 
-const ROULETTE_VALUES = {
-    color: ['Rojo', 'Negro', 'Verde'],
-    parity: ['par', 'impar'],
-    dozen: ['1', '2', '3'],
-};
+const ROULETTE_VALUES = new Map([
+    ['color', ['Rojo', 'Negro', 'Verde']],
+    ['parity', ['par', 'impar']],
+    ['dozen', ['1', '2', '3']],
+]);
+
+// Pago neto por ficha apostada (pagos estándar de ruleta europea).
+function roulettePayout(bet) {
+    if (bet.type === 'color' && bet.value === 'Verde') return 35;
+    if (bet.type === 'dozen') return 2;
+    return 1;
+}
 
 function validateRouletteBets(bets) {
     if (!Array.isArray(bets) || bets.length === 0 || bets.length > 20) {
-        throw badRequest('bets debe tener de 1 a 20 apuestas');
+        throw badRequest('Elige al menos una apuesta (máximo 20)');
     }
     let total = 0;
     for (const bet of bets) {
-        if (!bet || !ROULETTE_VALUES[bet.type] || !ROULETTE_VALUES[bet.type].includes(bet.value)) {
+        const allowed = bet && typeof bet.type === 'string' ? ROULETTE_VALUES.get(bet.type) : undefined;
+        if (!allowed || !allowed.includes(bet.value)) {
             throw badRequest('Apuesta de ruleta inválida');
         }
         if (!Number.isInteger(bet.amount) || bet.amount < 1) {
@@ -100,8 +146,9 @@ function rouletteSpin(bets, rng = defaultRng) {
     let net = 0;
     const results = bets.map((bet) => {
         const won = winningSlot[bet.type] === bet.value;
-        net += won ? bet.amount : -bet.amount;
-        return { type: bet.type, value: bet.value, amount: bet.amount, won };
+        const change = won ? bet.amount * roulettePayout(bet) : -bet.amount;
+        net += change;
+        return { type: bet.type, value: bet.value, amount: bet.amount, won, change };
     });
     return { winningIndex, winningSlot, results, net, total };
 }
@@ -109,12 +156,37 @@ function rouletteSpin(bets, rng = defaultRng) {
 // ---------- Minas ----------
 const MINES_BOARD_SIZE = 5;
 const MINES_COUNT = 5;
-const MINES_SAFE_CELLS = MINES_BOARD_SIZE * MINES_BOARD_SIZE - MINES_COUNT;
+const MINES_CELLS = MINES_BOARD_SIZE * MINES_BOARD_SIZE;
+const MINES_SAFE_CELLS = MINES_CELLS - MINES_COUNT;
+const MINES_MAX_PAYOUT = 1000000;
+
+function choose(n, k) {
+    let r = 1;
+    for (let i = 1; i <= k; i += 1) r = (r * (n - k + i)) / i;
+    return Math.round(r);
+}
+
+// Tras destapar `safe` casillas seguras, el pago justo es 1 / P(sobrevivir) = C(25,safe)/C(20,safe).
+function minesFraction(safe) {
+    return { num: HOUSE_NUM * choose(MINES_CELLS, safe), den: HOUSE_DEN * choose(MINES_SAFE_CELLS, safe) };
+}
+
+function minesMultiplier(safe) {
+    if (safe <= 0) return 1;
+    const { num, den } = minesFraction(safe);
+    return Math.floor((num * 100) / den) / 100;
+}
+
+function minesPayout(bet, safe) {
+    if (safe <= 0) return bet;
+    const { num, den } = minesFraction(safe);
+    return Math.min(MINES_MAX_PAYOUT, roundPayout(bet * num, den));
+}
 
 function minesPlace(rng = defaultRng) {
     const mines = new Set();
     while (mines.size < MINES_COUNT) {
-        mines.add(rng(0, MINES_BOARD_SIZE * MINES_BOARD_SIZE));
+        mines.add(rng(0, MINES_CELLS));
     }
     return [...mines].sort((a, b) => a - b);
 }
@@ -131,7 +203,9 @@ function minesToCells(indexes) {
 }
 
 module.exports = {
-    hiloDraw, hiloWinningValues, hiloResolve,
-    ROULETTE_WHEEL, rouletteSpin, validateRouletteBets,
-    minesPlace, minesIndex, minesToCells, MINES_BOARD_SIZE, MINES_COUNT, MINES_SAFE_CELLS,
+    roundPayout,
+    hiloDraw, hiloDrawVisible, hiloWinningValues, hiloMultipliers, hiloResolve,
+    ROULETTE_WHEEL, rouletteSpin, validateRouletteBets, roulettePayout,
+    minesPlace, minesIndex, minesToCells, minesMultiplier, minesPayout,
+    MINES_BOARD_SIZE, MINES_COUNT, MINES_SAFE_CELLS, MINES_MAX_PAYOUT,
 };

@@ -1,82 +1,53 @@
-const nameR = document.getElementById('name');
-const ageR = document.getElementById('age');
-const emailR = document.getElementById('email');
-const passwordR = document.getElementById('password');
-const passwordRepit = document.getElementById('Repitpassword');
-const actionRegister = document.getElementById('regiteering');
+// FrioMx: registro. Valida en el navegador y, si sale bien, entra directo al lobby.
+(function () {
+    'use strict';
+    const { api, setToken, chips, LOBBY } = window.FrioMx;
+    const UI = window.FrioUI;
 
-actionRegister.addEventListener('click', async () => {
-    try {
-        const userName = nameR.value;
-        const userAge = ageR.value;
-        const userEmail = emailR.value;
-        const userPassword = passwordR.value;
-        const userPasswordRepeat = passwordRepit.value;
+    const form = document.getElementById('register-form');
+    const name = document.getElementById('name');
+    const age = document.getElementById('age');
+    const email = document.getElementById('email');
+    const password = document.getElementById('password');
+    const confirm = document.getElementById('confirm');
+    const submit = document.getElementById('submit');
 
-        if (userPassword.length < 8 || new TextEncoder().encode(userPassword).length > 72) {
-            Swal.fire({
-                icon: "error",
-                title: "Sucedió un error.",
-                text: "La contraseña debe tener al menos 8 caracteres y máximo 72 bytes",
+    UI.passwordToggles(form);
+    UI.liveClear(form);
+    // Edad: no se recorta en silencio ("25.5" no debe volverse 25); se avisa en cuanto aparece algo que no es dígito.
+    age.addEventListener('input', () => {
+        if (/\D/.test(age.value.trim())) UI.setFieldError(age, 'La edad debe ser un número entero.');
+    });
+
+    form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const ok = UI.check(form, [
+            [name, UI.rules.name],
+            [age, UI.rules.age],
+            [email, UI.rules.email],
+            [password, UI.rules.password],
+            [confirm, (v) => (!v ? 'Vuelve a escribir la contraseña.' : v !== password.value ? 'Las contraseñas no coinciden.' : '')],
+        ]);
+        if (!ok) return;
+        UI.busy(submit, true, 'Creando cuenta…');
+        try {
+            const data = await api('/auth/register', {
+                method: 'POST', auth: false,
+                body: { name: name.value.trim(), age: Number(age.value), email: email.value.trim(), password: password.value },
             });
-            return;
+            setToken(data.token);
+            sessionStorage.setItem('friomx-flash', `¡Bienvenido! Tienes ${chips(data.user.balance)}`);
+            location.replace(window.FrioMx.safeNext(new URLSearchParams(location.search).get('next'), LOBBY));
+        } catch (err) {
+            UI.busy(submit, false);
+            UI.serverError(form, err, { name, age, email, password });
         }
+    });
+})();
 
-        if (userPassword !== userPasswordRepeat) {
-            Swal.fire({
-                icon: "error",
-                title: "Sucedió un error.",
-                text: "Las contraseñas no coinciden!",
-            });
-            return;
-        }
-
-        const userData = {
-            name: userName,
-            age: Number(userAge),
-            email: userEmail,
-            password: userPassword,
-        };
-
-        const response = await fetch(getApiUrl(API_CONFIG.ENDPOINTS.REGISTER), {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(userData),
-        });
-
-        if (response.ok) {
-            const data = await response.json();
-            
-            if (data.token) {
-                localStorage.setItem('token', data.token);
-                localStorage.setItem('userId', data.user.id);
-            }
-
-            Swal.fire({
-                icon: "success",
-                title: "Se ha registrado con éxito",
-                showConfirmButton: false,
-                timer: 1500
-            });
-
-            setTimeout(function() {
-                window.location.href = '/logIn';
-            }, 1500);
-        } else {
-            const errorData = await response.json();
-            Swal.fire({
-                icon: "error",
-                title: "Sucedió un error.",
-                text: errorData.error || "No se completó el registro, vuelve a intentarlo!",
-            });
-        }
-    } catch (error) {
-        Swal.fire({
-            icon: "error",
-            title: "Error de conexión",
-            text: "No se pudo conectar con el servidor",
-        });
-    }
-});
+// Conserva ?next= en los enlaces a iniciar sesión.
+(function () {
+    const next = new URLSearchParams(location.search).get('next');
+    if (!next) return;
+    document.querySelectorAll('a[href="/logIn"], a[href="/login"]').forEach((a) => { a.href = '/logIn?next=' + encodeURIComponent(next); });
+})();

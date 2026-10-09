@@ -1,0 +1,392 @@
+/* FrioMx: estilos de las páginas de cuenta, navegación y contenido.
+   Se apoya en app.css (variables, .card, .btn, .field, .badge, .table...). */
+
+/* ---------- Encabezado público y pie ---------- */
+.public-top { position: sticky; top: 0; z-index: 30; gap: 12px; background: rgba(10, 17, 32, .85); backdrop-filter: blur(10px); border-bottom: 1px solid var(--line); }
+.public-top .actions { display: flex; gap: 8px; align-items: center; }
+html[data-session="in"] .public-top, html[data-session="in"] .public-foot { display: none; }
+.public-foot {
+    border-top: 1px solid var(--line); margin-top: 48px;
+    padding: 24px clamp(16px, 4vw, 48px); color: var(--muted); font-size: .9rem;
+    display: flex; gap: 12px 24px; flex-wrap: wrap; justify-content: space-between; align-items: center;
+}
+.public-foot nav { display: flex; gap: 16px; flex-wrap: wrap; }
+.public-foot a { color: var(--muted); }
+.public-foot a:hover { color: var(--text); }
+.public-main { max-width: 1160px; margin: 0 auto; padding: 0 clamp(16px, 4vw, 40px); }
+.eyebrow { display: inline-block; font-size: .78rem; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: var(--accent); margin-bottom: 10px; }
+.section { margin-top: 56px; }
+.section-head { margin-bottom: 20px; }
+.section-head h2 { font-size: clamp(1.4rem, 2.4vw, 1.8rem); margin-bottom: 6px; }
+.section-head p { margin: 0; color: var(--muted); }
+
+/* ---------- Landing ---------- */
+.hero {
+    display: grid; grid-template-columns: 1.1fr .9fr; gap: 40px; align-items: center;
+    padding: clamp(32px, 6vw, 72px) 0 8px;
+}
+.hero h1 { font-size: clamp(2.4rem, 6vw, 4.2rem); letter-spacing: -.02em; margin-bottom: 14px; }
+.hero h1 b { color: var(--accent); }
+.hero .lead { font-size: clamp(1.05rem, 1.6vw, 1.25rem); color: var(--text); margin: 0 0 10px; max-width: 34ch; }
+.hero .gift { display: inline-flex; align-items: center; gap: 10px; margin: 8px 0 24px; padding: 8px 14px 8px 8px; border-radius: 999px; background: rgba(246, 196, 83, .1); border: 1px solid rgba(246, 196, 83, .35); color: var(--gold); font-weight: 700; }
+.coin { width: 22px; height: 22px; border-radius: 50%; flex: none; display: inline-block; background: radial-gradient(circle at 35% 35%, #ffe08a, var(--gold) 55%, #b8861b); box-shadow: inset 0 0 0 2px rgba(0, 0, 0, .15); }
+.hero .cta { display: flex; gap: 12px; flex-wrap: wrap; }
+.hero .fine { margin-top: 14px; font-size: .88rem; color: var(--muted); }
+.hero-art { position: relative; height: 380px; }
+.hero-art img {
+    position: absolute; width: 46%; aspect-ratio: 3 / 4; object-fit: cover;
+    border-radius: 18px; box-shadow: 0 24px 50px rgba(0, 0, 0, .45); border: 1px solid rgba(255, 255, 255, .08);
+}
+.hero-art img:nth-child(1) { left: 0; top: 40px; transform: rotate(-8deg); }
+.hero-art img:nth-child(2) { left: 27%; top: 0; z-index: 2; }
+.hero-art img:nth-child(3) { right: 0; top: 40px; transform: rotate(8deg); }
+
+.game-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
+.game-card {
+    display: flex; flex-direction: column; overflow: hidden;
+    background: var(--card); border: 1px solid var(--line); border-radius: var(--radius);
+    color: var(--text); text-decoration: none; box-shadow: var(--shadow);
+    transition: transform .15s, border-color .15s;
+}
+.game-card:hover { transform: translateY(-3px); border-color: var(--accent); }
+.game-card .art { aspect-ratio: 16 / 10; overflow: hidden; background: var(--bg-2); }
+.game-card .art img { width: 100%; height: 100%; object-fit: cover; object-position: center 30%; }
+.game-card .body { padding: 16px 18px 18px; display: flex; flex-direction: column; gap: 6px; flex: 1; }
+.game-card h3 { margin: 0; font-size: 1.25rem; }
+.game-card p { margin: 0; color: var(--muted); }
+.game-card .pay { margin-top: auto; padding-top: 10px; display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; }
+.game-card .go { color: var(--accent); font-weight: 700; }
+
+/* En grillas las tarjetas no llevan el margen de .card + .card */
+.steps > .card + .card, .grid > .card + .card, .profile-grid .card + .card { margin-top: 0; }
+.stack > .card + .card { margin-top: 0; }
+.steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; list-style: none; margin: 0; padding: 0; }
+.step { position: relative; padding-top: 22px; }
+.step .n { width: 38px; height: 38px; border-radius: 12px; display: grid; place-items: center; background: rgba(25, 211, 197, .12); color: var(--accent); font-family: 'Khand', sans-serif; font-size: 1.4rem; margin-bottom: 12px; }
+.step h3 { font-size: 1.1rem; margin-bottom: 4px; }
+.step p { margin: 0; color: var(--muted); }
+
+/* ---------- Login y registro ---------- */
+.auth-wrap { min-height: calc(100vh - 140px); padding: 32px 16px; }
+.auth-card { padding: 28px; }
+.auth-card h1 { font-size: 1.7rem; margin-bottom: 4px; }
+.auth-card .sub { margin: 0 0 22px; color: var(--muted); }
+.auth-card form { display: flex; flex-direction: column; gap: 14px; }
+.auth-card .switch { text-align: center; margin: 18px 0 0; color: var(--muted); }
+.auth-card .switch a { font-weight: 700; }
+.field-row { display: grid; grid-template-columns: 1fr 110px; gap: 12px; }
+.pw-wrap { position: relative; }
+.pw-wrap .input { padding-right: 96px; }
+.pw-toggle {
+    position: absolute; right: 6px; top: 50%; transform: translateY(-50%);
+    min-height: 34px; padding: 4px 10px; border-radius: 8px;
+    background: transparent; border: 0; color: var(--muted); font: inherit; font-size: .85rem; font-weight: 700; cursor: pointer;
+}
+.pw-toggle:hover { color: var(--text); background: var(--card-2); }
+.form-error {
+    display: none; padding: 10px 12px; border-radius: var(--radius-sm);
+    background: rgba(240, 82, 82, .1); border: 1px solid rgba(240, 82, 82, .45); color: #ffc9c9; font-size: .92rem;
+}
+.form-error:not(:empty) { display: block; }
+.form-ok {
+    display: none; padding: 10px 12px; border-radius: var(--radius-sm);
+    background: rgba(34, 197, 94, .1); border: 1px solid rgba(34, 197, 94, .45); color: #c6f6d5; font-size: .92rem;
+}
+.form-ok:not(:empty) { display: block; }
+.btn .spinner { width: 16px; height: 16px; border-radius: 50%; border: 2px solid currentColor; border-right-color: transparent; animation: spin .7s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ---------- Lobby ---------- */
+.welcome { display: grid; grid-template-columns: 1fr auto; gap: 16px; align-items: center; margin-bottom: 24px; }
+.welcome h1 { margin-bottom: 4px; }
+.welcome p { margin: 0; color: var(--muted); }
+.balance-card { display: flex; align-items: center; gap: 14px; padding: 14px 18px; }
+.balance-card .label { font-size: .8rem; color: var(--muted); text-transform: uppercase; letter-spacing: .1em; }
+.balance-card .value { font-family: 'Khand', sans-serif; font-size: 2rem; line-height: 1; }
+.balance-card .coin { width: 34px; height: 34px; }
+.lobby-games .game-card .art { aspect-ratio: 16 / 9; }
+.soon-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
+.soon {
+    position: relative; overflow: hidden; border-radius: var(--radius-sm);
+    border: 1px dashed var(--line); background: var(--bg-2); cursor: default;
+}
+.soon img { width: 100%; aspect-ratio: 16 / 10; object-fit: cover; object-position: center 30%; filter: grayscale(1) brightness(.55); }
+.soon .meta { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 10px 12px; }
+.soon .meta span:first-child { font-weight: 700; color: var(--muted); }
+.recent-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 8px; }
+.recent-head h2 { margin: 0; }
+.recent-list { list-style: none; margin: 0; padding: 0; }
+.recent-list li { display: grid; grid-template-columns: 40px 1fr auto auto; gap: 12px; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--line); }
+.recent-list li:last-child { border-bottom: 0; }
+.game-thumb { width: 40px; height: 40px; border-radius: 10px; object-fit: cover; object-position: center 25%; background: var(--bg-2); }
+.recent-list .when { display: block; font-size: .82rem; color: var(--muted); }
+.amount { font-family: 'Khand', sans-serif; font-size: 1.2rem; white-space: nowrap; }
+.amount.pos { color: var(--win); }
+.amount.neg { color: var(--lose); }
+.amount.zero { color: var(--muted); }
+
+/* ---------- Perfil ---------- */
+.profile-grid { display: grid; grid-template-columns: 320px 1fr; gap: 18px; align-items: start; }
+.profile-side { text-align: center; display: flex; flex-direction: column; align-items: center; gap: 10px; }
+.avatar-xl { width: 104px; height: 104px; font-size: 2.2rem; }
+.profile-side h2 { margin: 6px 0 0; word-break: break-word; }
+.profile-side .email { color: var(--muted); word-break: break-all; margin: 0; }
+.profile-side .divider { width: 100%; border-top: 1px solid var(--line); margin: 6px 0; }
+.kv { width: 100%; display: grid; grid-template-columns: 1fr auto; gap: 8px; text-align: left; margin: 0; }
+.kv dt { color: var(--muted); }
+.kv dd { margin: 0; font-weight: 700; text-align: right; }
+.profile-side .btn { width: 100%; }
+.settings h2 { margin-bottom: 4px; }
+.settings .desc { margin: 0 0 16px; color: var(--muted); font-size: .92rem; }
+.settings form { display: flex; flex-direction: column; gap: 12px; }
+.settings .actions { display: flex; gap: 10px; flex-wrap: wrap; }
+.inline-edit { display: flex; gap: 10px; align-items: flex-start; flex-wrap: wrap; }
+.inline-edit .field { flex: 1 1 240px; }
+.inline-edit .btns { display: flex; gap: 8px; padding-top: 28px; }
+
+/* ---------- Saldo ---------- */
+.wallet-hero { display: grid; grid-template-columns: auto 1fr; gap: 20px; align-items: center; padding: 26px; background: linear-gradient(135deg, #1b2b52, var(--card)); }
+.wallet-hero .coin { width: 72px; height: 72px; }
+.wallet-hero .label { color: var(--muted); font-size: .85rem; text-transform: uppercase; letter-spacing: .12em; }
+.wallet-hero .value { font-family: 'Khand', sans-serif; font-size: clamp(2.8rem, 7vw, 4rem); line-height: 1; }
+.wallet-hero .value small { font-size: 1.2rem; color: var(--muted); margin-left: 6px; }
+.packs { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
+.pack { border: 1px solid var(--line); background: var(--bg-2); border-radius: var(--radius-sm); padding: 16px; display: flex; flex-direction: column; gap: 10px; opacity: .8; }
+.pack .chips { font-family: 'Khand', sans-serif; font-size: 1.8rem; line-height: 1; }
+.pack .chips small { font-family: 'Switzer', sans-serif; font-size: .85rem; color: var(--muted); margin-left: 4px; }
+.pack .btn { cursor: not-allowed; }
+.facts { margin: 0; padding-left: 20px; color: var(--muted); }
+.facts li + li { margin-top: 6px; }
+.facts strong { color: var(--text); }
+
+/* ---------- Historial ---------- */
+.filters { display: flex; gap: 6px; flex-wrap: wrap; }
+.filters .chip-btn[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.activity-card { padding: 8px 20px 20px; }
+.activity-table .game { display: flex; align-items: center; gap: 12px; font-weight: 700; }
+.activity-table td { vertical-align: middle; }
+.activity-table tbody tr:hover { background: rgba(255, 255, 255, .02); }
+.list-foot { display: flex; justify-content: center; margin-top: 16px; }
+.load-error { display: flex; gap: 12px; align-items: center; justify-content: space-between; flex-wrap: wrap; }
+
+/* ---------- Reglas e info ---------- */
+.content { max-width: 920px; }
+.content p, .content li { color: #cfd8ef; }
+.content .card h2 { display: flex; align-items: center; gap: 12px; }
+.content .card h2 img { width: 44px; height: 44px; border-radius: 10px; object-fit: cover; object-position: center 25%; }
+.content h3 { font-size: 1.02rem; margin: 18px 0 6px; color: var(--text); }
+.content ul, .content ol { padding-left: 20px; margin: 6px 0; }
+.content li + li { margin-top: 4px; }
+.toc { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 18px; }
+.table-wrap { overflow-x: auto; margin-top: 8px; }
+.pay-table { min-width: 420px; }
+.pay-table td:last-child, .pay-table th:last-child { text-align: right; white-space: nowrap; }
+.callout { border-left: 3px solid var(--gold); background: rgba(246, 196, 83, .07); padding: 12px 14px; border-radius: 0 var(--radius-sm) var(--radius-sm) 0; margin-top: 12px; }
+.callout p { margin: 0; }
+.team { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-top: 8px; }
+.member { display: flex; align-items: center; gap: 12px; padding: 14px; border: 1px solid var(--line); border-radius: var(--radius-sm); background: var(--bg-2); }
+.member .avatar { width: 44px; height: 44px; }
+.member b { display: block; }
+.member span { color: var(--muted); font-size: .88rem; }
+.stack-list { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+
+/* ---------- 404 ---------- */
+.notfound { min-height: calc(100vh - 160px); display: grid; place-items: center; text-align: center; padding: 32px 16px; }
+.notfound .code { font-family: 'Khand', sans-serif; font-size: clamp(5rem, 18vw, 9rem); line-height: 1; color: var(--accent); }
+.notfound p { color: var(--muted); max-width: 40ch; margin: 0 auto 22px; }
+.notfound .row { justify-content: center; }
+
+/* ---------- Responsive ---------- */
+@media (max-width: 1100px) {
+    .soon-grid, .packs { grid-template-columns: repeat(2, 1fr); }
+    .profile-grid { grid-template-columns: 1fr; }
+}
+@media (max-width: 900px) {
+    .hero { grid-template-columns: 1fr; gap: 24px; }
+    .hero-art { height: 260px; max-width: 460px; width: 100%; margin: 0 auto; }
+    .game-grid, .steps, .team { grid-template-columns: 1fr; }
+    .game-card { flex-direction: row; }
+    .game-card .art { aspect-ratio: auto; width: 120px; flex: none; }
+    .lobby-games .game-card .art { aspect-ratio: auto; }
+    .welcome { grid-template-columns: 1fr; }
+    .activity-card { padding: 8px 14px 16px; }
+    /* Historial: cada fila pasa a ser una tarjeta */
+    .activity-table thead { display: none; }
+    .activity-table, .activity-table tbody, .activity-table tr, .activity-table td { display: block; width: 100%; }
+    .activity-table tr {
+        display: grid; grid-template-columns: 1fr auto; gap: 4px 12px;
+        padding: 12px 0; border-bottom: 1px solid var(--line);
+    }
+    .activity-table td { padding: 0; border: 0; }
+    .activity-table td.c-game { grid-column: 1; }
+    .activity-table td.c-net { grid-column: 2; grid-row: 1; text-align: right; align-self: center; }
+    .activity-table td.c-date { grid-column: 1 / -1; color: var(--muted); font-size: .85rem; }
+    .activity-table td.c-bet, .activity-table td.c-res { grid-column: auto; font-size: .9rem; }
+    .activity-table td.c-bet::before { content: 'Apuesta: '; color: var(--muted); }
+    .activity-table td.c-res { text-align: right; }
+}
+@media (max-width: 560px) {
+    .public-top .actions .btn { min-height: 38px; padding: 6px 12px; font-size: .9rem; }
+    .hero-art { height: 210px; }
+    .hero .cta .btn { flex: 1 1 auto; }
+    .game-card .art { width: 96px; }
+    .soon-grid { gap: 10px; }
+    .soon .meta { flex-direction: column; align-items: flex-start; gap: 4px; padding: 8px 10px; }
+    .field-row { grid-template-columns: 1fr; }
+    .auth-card { padding: 22px 18px; }
+    .recent-list li { grid-template-columns: 40px 1fr auto; }
+    .recent-list li .badge { display: none; }
+    .wallet-hero { grid-template-columns: 1fr; text-align: center; justify-items: center; }
+    .inline-edit .btns { padding-top: 0; width: 100%; }
+    .inline-edit .btns .btn { flex: 1; }
+    .public-foot { flex-direction: column; align-items: flex-start; }
+}
+a.balance-card { text-decoration: none; color: inherit; }
+a.balance-card:hover { border-color: var(--accent); }
+ul.soon-grid { list-style: none; margin: 0; padding: 0; }
+html:not([data-session="in"]) .content { margin: 0 auto; }
+html:not([data-session="in"]) body > .main { padding-top: 32px; }
+.game-card .pay { flex-direction: column; align-items: flex-start; }
+@media (max-width: 560px) {
+    .hero-art { max-width: 330px; }
+    .hero-art img { width: 42%; }
+    .hero-art img:nth-child(2) { left: 29%; }
+}
+.lobby-games .game-card .pay { flex-direction: row; align-items: center; justify-content: space-between; }
+.settings form.inline-edit { flex-direction: row; align-items: flex-start; }
+.inline-edit .form-error { flex-basis: 100%; }
+.inline-edit .field .input[readonly] { background: transparent; border-color: transparent; padding-left: 0; font-weight: 700; font-size: 1.1rem; }
+.page-head h1 { margin-bottom: 4px; }
+.inline-edit .input[readonly] ~ .hint { display: none; }
+@media (max-width: 900px) { .activity-table td.c-bet { text-align: left; } .activity-table td.c-res { justify-self: end; } }
+@media (max-width: 560px) { .pay-table { min-width: 0; font-size: .88rem; } .pay-table th, .pay-table td { padding: 9px 6px; } .pay-table th { font-size: .68rem; letter-spacing: .04em; } .content .card { padding: 16px; } }
+.member .avatar { color: #fff; font-size: .9rem; }
+
+/* ---------- Ronda 2 de QA ---------- */
+.load-error[hidden], .form-info:empty { display: none; }
+
+/* Iconos propios de cada juego en un círculo de color (sustituyen al arte con texto en inglés). */
+.game-ico {
+    width: 40px; height: 40px; border-radius: 50%; flex: none;
+    display: inline-grid; place-items: center; color: #fff;
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .18);
+}
+.game-ico svg { width: 22px; height: 22px; }
+.ico-roulette { background: linear-gradient(135deg, #22c55e, #15803d); }
+.ico-hilo { background: linear-gradient(135deg, #a78bfa, #6d28d9); }
+.ico-mines { background: linear-gradient(135deg, #60a5fa, #1d4ed8); }
+.ico-lobby { background: var(--card-2); color: var(--muted); }
+.content .card h2 .game-ico { width: 44px; height: 44px; }
+
+/* Arte de los juegos: se recorta a la parte de arriba, donde no hay letras (el nombre en inglés está abajo). */
+.game-card .art { position: relative; }
+.game-card .art .game-ico { display: none; }
+.game-card .art img, .soon img { object-position: center top; }
+.art-hilo img { transform: scale(1.5); transform-origin: 100% 0; } /* deja fuera el "HIGH / LOW" de la izquierda */
+@media (max-width: 900px) {
+    /* En celular la tarjeta es horizontal y el arte quedaría vertical (con el texto): se usa el icono. */
+    .game-card .art, .lobby-games .game-card .art { width: 84px; display: grid; place-items: center; background: var(--bg-2); border-right: 1px solid var(--line); }
+    .game-card .art img { display: none; }
+    .game-card .art .game-ico { display: inline-grid; width: 52px; height: 52px; }
+    .game-card .art .game-ico svg { width: 28px; height: 28px; }
+}
+@media (max-width: 560px) { .game-card .art { width: 76px; } }
+
+/* Landing: tres tarjetas apaisadas en abanico; en formato 4:3 solo se ve la parte de arriba del arte. */
+.hero-art { height: auto; aspect-ratio: 460 / 400; }
+.hero-art .frame {
+    position: absolute; width: 58%; aspect-ratio: 4 / 3; overflow: hidden;
+    border-radius: 18px; box-shadow: 0 24px 50px rgba(0, 0, 0, .45); border: 1px solid rgba(255, 255, 255, .08);
+}
+.hero-art .frame img { position: static; width: 100%; height: 100%; aspect-ratio: auto; object-fit: cover; object-position: center top; border: 0; border-radius: 0; box-shadow: none; transform: none; }
+.hero-art .frame:nth-child(1) { left: 0; top: 0; transform: rotate(-5deg); z-index: 1; }
+.hero-art .frame:nth-child(2) { right: 0; top: 22%; transform: rotate(4deg); z-index: 2; }
+.hero-art .frame:nth-child(3) { left: 12%; top: 48%; transform: rotate(-2deg); z-index: 3; }
+.hero-art .frame.art-hilo img { transform: scale(1.5); transform-origin: 100% 0; }
+@media (max-width: 900px) { .hero-art { height: auto; max-width: 420px; } }
+@media (max-width: 560px) { .hero-art { height: auto; max-width: 320px; } }
+
+/* Historial y lobby */
+.res { display: inline-flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+.activity-table td.c-res .res { justify-content: flex-start; }
+.btn.continue { min-height: 32px; padding: 4px 12px; font-size: .85rem; }
+@media (max-width: 900px) { .activity-table td.c-res .res { justify-content: flex-end; } }
+
+/* Lobby: saludo sin nombre mientras no carga; estado de error del saldo. */
+.greet-name:has([data-user-name]:empty) { display: none; }
+.me-error { max-width: 420px; }
+.me-error p { margin: 0; }
+#profile-error { margin-bottom: 18px; }
+#profile-error p { margin: 0; }
+
+/* Lobby: el toast de bienvenida no tapa la tarjeta "Tu saldo" (va abajo). */
+html[data-page="lobby"] .toasts { top: auto; bottom: 16px; }
+@media (max-width: 900px) { html[data-page="lobby"] .toasts { bottom: calc(var(--bottombar-h) + 12px); } }
+
+/* Login: aviso fijo de sesión dentro de la tarjeta */
+.form-info {
+    margin: 0 0 14px; padding: 10px 12px; border-radius: var(--radius-sm);
+    background: rgba(25, 211, 197, .08); border: 1px solid rgba(25, 211, 197, .45); color: var(--text); font-size: .92rem;
+}
+
+/* Reglas: enlace a Acerca de (en celular con sesión no hay pie público) */
+.more-links { margin: 24px 0 0; color: var(--muted); text-align: center; }
+.more-links a { font-weight: 700; }
+.profile-side.is-error .unit { display: none; }
+/* Tablas de pago en 360 px: que quepan sin desplazamiento lateral */
+@media (max-width: 420px) {
+    .pay-table th { letter-spacing: 0; font-size: .62rem; hyphens: auto; overflow-wrap: anywhere; }
+    .pay-table th, .pay-table td { padding: 8px 4px; }
+    .pay-table td { font-size: .82rem; }
+}
+
+/* ---------- Ronda 3 de QA ---------- */
+/* U3-5: lo que se gana va en palabras, no en "x1.18" ni "35:1". */
+.game-card .pay-note { color: var(--gold); font-weight: 700; font-size: .92rem; line-height: 1.3; }
+.table-note { font-size: .9rem; color: var(--muted) !important; margin: 6px 0 12px; }
+.pay-table td.num { font-size: 1.1rem; white-space: nowrap; }
+
+/* U3-10: el aviso de llegada va dentro del lobby, arriba, y no flota sobre las tarjetas. */
+.flash-banner {
+    display: flex; align-items: center; gap: 12px; margin: 0 0 18px; padding: 12px 14px;
+    border-radius: var(--radius-sm); border: 1px solid rgba(246, 196, 83, .45); background: rgba(246, 196, 83, .1);
+}
+.flash-banner p { margin: 0; flex: 1; font-weight: 700; color: var(--gold); }
+.flash-banner .close { background: none; border: 0; color: var(--muted); font-size: 1.4rem; line-height: 1; cursor: pointer; min-width: 40px; min-height: 40px; border-radius: 8px; }
+.flash-banner .close:hover { color: var(--text); background: var(--card-2); }
+
+/* U3-14: salida visible en el lobby del celular (en escritorio ya está en el menú lateral). */
+.lobby-foot { display: none; }
+@media (max-width: 900px) {
+    .lobby-foot { display: flex; align-items: center; justify-content: center; gap: 12px 20px; flex-wrap: wrap; margin-top: 24px; }
+    .lobby-foot a { color: var(--muted); font-weight: 600; min-height: 40px; display: inline-flex; align-items: center; }
+}
+/* En pantallas táctiles no hay Enter ni Esc. */
+@media (max-width: 900px), (hover: none) { .kbd-only { display: none; } }
+
+/* U3-11: historial con lo que pasó en cada partida y un resumen. */
+.activity-table .game-text { display: flex; flex-direction: column; min-width: 0; }
+.activity-table .detail { font-weight: 400; font-size: .85rem; color: var(--muted); overflow-wrap: anywhere; }
+.hist-summary { display: flex; gap: 6px 24px; flex-wrap: wrap; padding: 12px 0 10px; border-bottom: 1px solid var(--line); }
+.hist-summary p { margin: 0; display: inline-flex; align-items: baseline; gap: 4px; flex-wrap: wrap; }
+.hist-summary .k { color: var(--muted); font-weight: 700; }
+.hist-summary .today .amount { font-size: 1.35rem; }
+
+/* U3-16: en celular la landing también lleva las ilustraciones, recortadas arriba (sin el nombre en inglés). */
+@media (max-width: 900px) {
+    .public-main .game-card { flex-direction: column; }
+    .public-main .game-card .art { width: 100%; aspect-ratio: 16 / 7; display: block; border-right: 0; border-bottom: 1px solid var(--line); }
+    .public-main .game-card .art img { display: block; object-position: center top; }
+    .public-main .game-card .art .game-ico { display: none; }
+}
+
+/* R3-02: el 404 usa el padding de .main (con el hueco de la barra inferior); .notfound solo centra. */
+.notfound { min-height: calc(100vh - 220px); padding: 16px 0; }
+@media (max-height: 500px) { .notfound { min-height: 0; } }
+/* R3-01: en celular horizontal el encabezado público tampoco es fijo (como la barra de la app),
+   así el foco del teclado no queda debajo de él. */
+@media (max-height: 500px) { .public-top { position: static; } }
+.pay-table th.n { white-space: nowrap; hyphens: none; overflow-wrap: normal; }
+
+/* Celular en horizontal: la ilustración no ocupa toda la pantalla (título y enlace visibles). */
+@media (max-height: 500px) { .game-card .art { aspect-ratio: auto; height: 40vh; } }

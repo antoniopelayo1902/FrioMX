@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="es" data-auth="public">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Página no encontrada · FrioMx</title>
+    <link rel="icon" href="/assets/images/icon.png" type="image/png">
+    <link rel="stylesheet" href="/styles/app.css">
+    <link rel="stylesheet" href="/styles/pages.css">
+    <!-- Con sesión se muestra el menú de la app, como en Reglas. -->
+    <script src="/scripts/hybrid.js"></script>
+    <script src="/scripts/app.js"></script>
+</head>
+<body>
+    <header class="public-top">
+        <a class="brand" href="/" aria-label="FrioMx, inicio">
+            <img src="/assets/images/icon.png" alt="" width="30" height="30"><span>Frio<b>Mx</b></span>
+        </a>
+    </header>
+    <main class="main" id="main">
+        <!-- .main lleva el padding del shell (incluido el hueco de la barra inferior); .notfound solo centra. -->
+        <div class="notfound">
+            <div>
+                <div class="code" aria-hidden="true">404</div>
+                <h1>No encontramos esta página</h1>
+                <p>Puede que el enlace esté mal escrito o que la página ya no exista.</p>
+                <div class="row">
+                    <a class="btn btn-primary" href="/">Ir al inicio</a>
+                    <a class="btn" href="/rules">Ver reglas</a>
+                </div>
+            </div>
+        </div>
+    </main>
+</body>
+</html>

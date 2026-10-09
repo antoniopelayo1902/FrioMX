@@ -17,8 +17,14 @@ async function requireAuth(req, res, next) {
             throw new AppError(401, 'UNAUTHORIZED', 'Sesión inválida o expirada');
         }
 
+        if (typeof payload.sub !== 'string' || payload.sub.length > 64) {
+            throw new AppError(401, 'UNAUTHORIZED', 'Sesión inválida o expirada');
+        }
         const user = await getUser(payload.sub);
         if (!user) throw new AppError(401, 'UNAUTHORIZED', 'Usuario no encontrado');
+        if ((payload.tv || 0) !== (user.tokenVersion || 0)) {
+            throw new AppError(401, 'UNAUTHORIZED', 'Tu contraseña cambió, inicia sesión de nuevo');
+        }
 
         req.userId = user.userId;
         req.user = user;

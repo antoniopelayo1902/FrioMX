@@ -1,7 +1,7 @@
 // Crea las tablas de FrioMx en DynamoDB Local para desarrollo.
 // Uso: DDB_ENDPOINT=http://localhost:8000 node scripts/create-local-tables.js
 require('dotenv').config();
-const { DynamoDBClient, CreateTableCommand, ListTablesCommand } = require('@aws-sdk/client-dynamodb');
+const { DynamoDBClient, CreateTableCommand, ListTablesCommand, UpdateTimeToLiveCommand } = require('@aws-sdk/client-dynamodb');
 const { config } = require('../src/config/env');
 
 if (!config.ddbEndpoint) {
@@ -42,6 +42,12 @@ const tables = [
             continue;
         }
         await client.send(new CreateTableCommand({ ...table, BillingMode: 'PAY_PER_REQUEST' }));
+        if (table.TableName === T.gameRounds) {
+            // Igual que en la nube (LLD §4.1): las rondas se borran solas al vencer.
+            await client.send(new UpdateTimeToLiveCommand({
+                TableName: T.gameRounds, TimeToLiveSpecification: { AttributeName: 'expiresAt', Enabled: true },
+            }));
+        }
         console.log(`creada ${table.TableName}`);
     }
 })().catch((err) => {

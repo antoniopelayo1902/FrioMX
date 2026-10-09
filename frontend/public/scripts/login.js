@@ -1,58 +1,58 @@
-const emailLogin = document.getElementById('email');
-const passLogin = document.getElementById('password');
-const actionLogin = document.getElementById('profiteering');
+// FrioMx: inicio de sesión.
+(function () {
+    'use strict';
+    const { api, setToken, LOBBY } = window.FrioMx;
+    const UI = window.FrioUI;
 
-actionLogin.addEventListener('click', async () => {
-    try {
-        let email = emailLogin.value;
-        let password = passLogin.value;
+    const form = document.getElementById('login-form');
+    const email = document.getElementById('email');
+    const password = document.getElementById('password');
+    const submit = document.getElementById('submit');
 
-        if (email === "" || password === "") {
-            Swal.fire({
-                icon: "error",
-                title: "Campos vacíos",
-                text: "Por favor ingresa email y contraseña",
-            });
-            return;
-        }
-
-        let credentials = { email, password };
-
-        const response = await fetch(getApiUrl(API_CONFIG.ENDPOINTS.LOGIN), {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(credentials),
-        });
-
-        if (response.ok) {
-            const data = await response.json();
-            const token = data.token;
-            
-            localStorage.setItem('token', token);
-            localStorage.setItem('userId', data.user.id);
-            
-            window.location.href = '/index_logIn';
-        } else if (response.status === 429) {
-            const errorData = await response.json();
-            Swal.fire({
-                icon: "error",
-                title: "Demasiados intentos",
-                text: errorData.error || "Espera un minuto e intenta de nuevo",
-            });
-        } else {
-            Swal.fire({
-                icon: "error",
-                title: "Salió algo mal",
-                text: "Contraseña o correo incorrecto!",
-            });
-        }
-    } catch (error) {
-        Swal.fire({
-            icon: "error",
-            title: "Error de conexión",
-            text: "No se pudo conectar con el servidor",
-        });
+    // Aviso de sesión (expirada, contraseña cambiada, cerrada en otra pestaña): fijo en la tarjeta.
+    // Este script corre antes que el arranque de app.js, así que lo consume aquí y app.js ya no lo muestra como toast.
+    const flash = sessionStorage.getItem('friomx-flash');
+    if (flash) {
+        sessionStorage.removeItem('friomx-flash');
+        document.getElementById('flash').textContent = /[.!?]$/.test(flash.trim()) ? flash.trim() : flash.trim() + '.';
     }
-});
+
+    UI.passwordToggles(form);
+    UI.liveClear(form);
+
+    // Solo se acepta un destino interno (ver FrioMx.safeNext).
+    function nextUrl() {
+        return window.FrioMx.safeNext(new URLSearchParams(location.search).get('next'), LOBBY);
+    }
+
+    // Conserva ?next= si el usuario se va a registrar desde aquí.
+    const next = new URLSearchParams(location.search).get('next');
+    if (next) document.querySelectorAll('a[href="/register"]').forEach((a) => { a.href = '/register?next=' + encodeURIComponent(next); });
+
+    form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const ok = UI.check(form, [
+            [email, UI.rules.email],
+            [password, UI.rules.required('Escribe tu contraseña.')],
+        ]);
+        if (!ok) return;
+        UI.busy(submit, true, 'Entrando…');
+        try {
+            const data = await api('/auth/login', { method: 'POST', auth: false, body: { email: email.value.trim(), password: password.value } });
+            setToken(data.token);
+            location.replace(nextUrl());
+        } catch (err) {
+            UI.busy(submit, false);
+            if (err.code === 'INVALID_CREDENTIALS' || err.status === 401) {
+                UI.setFormError(form, 'Correo o contraseña incorrectos. Revisa los datos e intenta de nuevo.');
+                password.select();
+                password.focus();
+            } else if (err.code === 'VALIDATION_ERROR') {
+                UI.serverError(form, err, { email, password });
+            } else {
+                // 429, red caída o error del servidor: el mensaje ya viene claro desde FrioMx.api.
+                UI.setFormError(form, err.message);
+            }
+        }
+    });
+})();

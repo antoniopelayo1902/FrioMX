@@ -1,72 +1,73 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="es" data-auth="guest">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Registrarse</title>
-    <link rel="stylesheet" href="styles/output.css">
-    <link rel="icon" href="assets/images/icon.png" type="image/png">
-    <link rel="stylesheet" href="styles/login.css?v=3">
-    <link rel="stylesheet" href="styles/swal-custom.css?v=1">
-    <script src="scripts/config.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Crear cuenta · FrioMx</title>
+    <link rel="icon" href="/assets/images/icon.png" type="image/png">
+    <link rel="stylesheet" href="/styles/app.css">
+    <link rel="stylesheet" href="/styles/pages.css">
+    <script src="/scripts/app.js"></script>
+    <script src="/scripts/ui.js" defer></script>
+    <script src="/scripts/register.js" defer></script>
 </head>
 <body>
+    <header class="public-top">
+        <a class="brand" href="/" aria-label="FrioMx, inicio">
+            <img src="/assets/images/icon.png" alt="" width="30" height="30"><span>Frio<b>Mx</b></span>
+        </a>
+        <div class="actions">
+            <a class="btn btn-ghost" href="/logIn">Iniciar sesión</a>
+        </div>
+    </header>
 
-    <section style="background-image: linear-gradient(to bottom, #0d1e2b, #0e1f2f, #0f2132, #112236, #132339, #132339, #132339, #132339, #112236, #0f2132, #0e1f2f, #0d1e2b);">
-        <div class="flex flex-col items-center justify-center px-6 py-8 mx-auto md:h-screen lg:py-0">
-            <a class="flex items-center mb-6  font-semibold text-gray-900 dark:text-white">
-                <img class="w-24 h-24 mr-2" src="assets/images/icon.png"  alt="idk">
-            </a>
-            <div class="w-full bg-white rounded-lg shadow dark:border md:mt-0 sm:max-w-md xl:p-0 dark:bg-gray-800 dark:border-gray-700">
-                <div class="p-6 space-y-4 md:space-y-6 sm:p-8">
-                    <h1 class="text-xl font-bold leading-tight tracking-tight text-gray-900 md:text-2xl dark:text-white">
-                        Registrarse
-                    </h1>
-                    <form class="space-y-4 md:space-y-6" onsubmit="return false;">
-                        <div>
-                            <label  class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Tu nombre</label>
-                            <input  name="email" id="name" class="bg-gray-50 border border-gray-300 text-gray-900 sm:text-sm rounded-lg focus:ring-primary-600 focus:border-primary-600 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500" placeholder="Javier" required="">
-                        </div>
-                        <div>
-                            <label  class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Edad</label>
-                            <input type="number" min="18" max="99" name="age" id="age" class="bg-gray-50 border border-gray-300 text-gray-900 sm:text-sm rounded-lg focus:ring-primary-600 focus:border-primary-600 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500" placeholder="22" required="">
-                        </div>
-                        <div>
-                            <label for="email" class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Tu correo</label>
-                            <input type="email" name="email" id="email" class="bg-gray-50 border border-gray-300 text-gray-900 sm:text-sm rounded-lg focus:ring-primary-600 focus:border-primary-600 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500" placeholder="nombre@correo.com" required="">
-                        </div>
-                        <div>
-                            <label for="password" class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Contraseña</label>
-                            <input type="password" name="password" id="password" placeholder="*******" class="bg-gray-50 border border-gray-300 text-gray-900 sm:text-sm rounded-lg focus:ring-primary-600 focus:border-primary-600 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500" required="">
-                        </div>
-                        <div>
-                            <label for="password" class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Repite la contraseña</label>
-                            <input type="password" name="password" id="Repitpassword" placeholder="*******" class="bg-gray-50 border border-gray-300 text-gray-900 sm:text-sm rounded-lg focus:ring-primary-600 focus:border-primary-600 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500" required="">
-                        </div>
-
-                        <button type="submit" id="regiteering" class="w-full text-white bg-primary-600 hover:bg-primary-700 focus:ring-4 focus:outline-none focus:ring-primary-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center dark:bg-primary-600 dark:hover:bg-primary-700 dark:focus:ring-primary-800">
-                            Registrarse
-                        </button>
-                        <p class="text-sm font-light text-gray-500 dark:text-gray-400">
-                            Ya tienes cuenta? <a onclick="goToInit()" class="font-medium text-primary-600 hover:underline dark:text-primary-500">Iniciar Sesion</a>
-                        </p>
-                    </form>
+    <main class="auth-wrap" id="main">
+        <div class="card auth-card">
+            <h1>Crear cuenta</h1>
+            <p class="sub">Te regalamos <strong>1,000 fichas</strong> para empezar. Sin dinero real.</p>
+            <form id="register-form" novalidate>
+                <div class="form-error" role="alert"></div>
+                <div class="field-row">
+                    <div class="field">
+                        <label for="name">Nombre</label>
+                        <input class="input" id="name" name="name" type="text" autocomplete="nickname" maxlength="40"
+                            placeholder="¿Cómo te llamamos?" aria-describedby="name-err" autofocus>
+                        <div class="error" id="name-err" aria-live="polite"></div>
+                    </div>
+                    <div class="field">
+                        <label for="age">Edad</label>
+                        <input class="input" id="age" name="age" type="text" inputmode="numeric" maxlength="4"
+                            placeholder="18+" aria-describedby="age-err">
+                        <div class="error" id="age-err" aria-live="polite"></div>
+                    </div>
                 </div>
-            </div>
+                <div class="field">
+                    <label for="email">Correo</label>
+                    <input class="input" id="email" name="email" type="email" autocomplete="email" inputmode="email"
+                        placeholder="nombre@correo.com" aria-describedby="email-err">
+                    <div class="error" id="email-err" aria-live="polite"></div>
+                </div>
+                <div class="field">
+                    <label for="password">Contraseña</label>
+                    <div class="pw-wrap">
+                        <input class="input" id="password" name="password" type="password" autocomplete="new-password"
+                            aria-describedby="password-hint password-err">
+                    </div>
+                    <div class="hint" id="password-hint">Mínimo 8 caracteres.</div>
+                    <div class="error" id="password-err" aria-live="polite"></div>
+                </div>
+                <div class="field">
+                    <label for="confirm">Confirmar contraseña</label>
+                    <div class="pw-wrap">
+                        <input class="input" id="confirm" name="confirm" type="password" autocomplete="new-password"
+                            aria-describedby="confirm-err">
+                    </div>
+                    <div class="error" id="confirm-err" aria-live="polite"></div>
+                </div>
+                <button class="btn btn-primary btn-lg btn-block" type="submit" id="submit">Crear cuenta</button>
+            </form>
+            <p class="switch">¿Ya tienes cuenta? <a href="/logIn">Inicia sesión</a></p>
         </div>
-    </section>
-
-    <div id="myModal" class="modal">
-        <div class="flex flex-col items-center justify-center modal-content">
-            <p class="text-white pb-5">La cuenta se ha creado.</p>
-            <button id="acceptButton">Aceptar</button>
-        </div>
-    </div>
-
+    </main>
 </body>
-
-<script src="scripts/indexLoading.js"></script>
-<script src="scripts/register.js"></script>
-<script src="https://kit.fontawesome.com/549e1abe3e.js" crossorigin="anonymous"></script>
 </html>

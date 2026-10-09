@@ -3,7 +3,7 @@ const { badRequest } = require('./errors');
 const MIN_BET = 1;
 const MAX_BET = 10000;
 const UUID_V4 = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const EMAIL = /^[^\s@]+@[^\s@.]+(\.[^\s@.]+)+$/;
 
 function betAmount(value, field = 'betAmount') {
     if (!Number.isInteger(value) || value < MIN_BET || value > MAX_BET) {
@@ -30,6 +30,13 @@ function name(value) {
     if (typeof value !== 'string' || value.trim().length < 1 || value.trim().length > 40) {
         throw badRequest('El nombre debe tener de 1 a 40 caracteres');
     }
+    if (/[<>]/.test(value)) throw badRequest('El nombre no puede llevar los caracteres < o >');
+    // Sin caracteres de control ni invisibles (saltos de línea, espacios de ancho cero, cambios de dirección).
+    // Se permiten los unidores de emoji (U+200D, U+FE0F) para nombres como "Ana 👨‍👩‍👧".
+    if (/[\p{Cc}\u200B\u200C\u200E\u200F\u202A-\u202E\u2060-\u2064\uFEFF]/u.test(value)) {
+        throw badRequest('El nombre tiene caracteres no permitidos');
+    }
+    if (!/[\p{L}\p{N}\p{S}]/u.test(value)) throw badRequest('El nombre debe tener al menos una letra o número');
     return value.trim();
 }
 
@@ -41,7 +48,8 @@ function password(value) {
 }
 
 function age(value) {
-    const n = Number(value);
+    const ok = (typeof value === 'number') || (typeof value === 'string' && /^[1-9]\d{0,2}$/.test(value.trim()));
+    const n = ok ? Number(value) : NaN;
     if (!Number.isInteger(n) || n < 18 || n > 99) {
         throw badRequest('La edad debe ser un entero entre 18 y 99');
     }

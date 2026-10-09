@@ -1,322 +1,108 @@
-
 <!DOCTYPE html>
-<html lang="en">
+<html lang="es" data-auth="private" data-page="roulette">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ruleta de Casino</title>
-    <script src="https://cdn.jsdelivr.net/npm/spin-wheel@4.3.0/dist/spin-wheel-iife.js"></script>
-    <link rel="stylesheet" href="styles/output.css">
-    <link rel="icon" href="assets/images/icon.png" type="image/png">
-    <link rel="stylesheet" href="styles/index.css">
-    <link rel="stylesheet" href="styles/roulette.css">
-    <script src="scripts/config.js"></script>
-    <script src="scripts/navbar.js"></script>
-    <script src="scripts/indexLoading.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Ruleta · FrioMx</title>
+    <link rel="icon" href="/assets/images/icon.png" type="image/png">
+    <link rel="stylesheet" href="/styles/app.css">
+    <link rel="stylesheet" href="/styles/roulette.css">
+    <script src="/scripts/app.js"></script>
+    <script src="/scripts/roulette.js" defer></script>
 </head>
-<body style="overflow: hidden; background-image: linear-gradient(to bottom, #0d1e2b, #0e1f2f, #0f2132, #112236, #132339, #132339, #132339, #132339, #112236, #0f2132, #0e1f2f, #0d1e2b);">
-
-    <header id="nav" class="h-20 w-full flex items-center relative justify-between px-5 space-x-10 dark:bg-[#1a2c38] ">
-        <div id="mainText" class="invisible px-3 dark:text-white text-6xl ">
-            Frio
+<body data-shell>
+<main id="main">
+    <div class="page-head rl-head" id="rl-head">
+        <div>
+            <h1 id="rl-title">Ruleta</h1>
+            <p>Elige dónde poner tus fichas y gira la rueda.</p>
         </div>
-
-        <div class=" flex flex-none ">
-            <img src="/assets/images/full_logo.png" alt="iconOnMainPage">
-        </div>
-
-        <div class="flex flex-shrink-0 items-center space-x-4 text-white">
-            <div id="name" class="flex px-3 space-x-3">
-
-            </div>
-            <div></div>
-            <div></div>
-            <div id="reg" class="invisible flex px-3 space-x-3">
-                <button class="btn">
-                    Registrarse
-                </button>
-            </div>
-
-            <div class="flex flex-shrink-0 items-center justify-center space-x-4 text-white">
-                <div id="btnProf" class="flex px-3 space-x-3">
-                    <button class="btn" onclick="goToProfile()">
-                        <a id="textProf"></a>
-                    </button>
-                    <button class="rounded-full " onclick="goToProfile()">
-                        <img class="h-6 w-auto rounded-full" data-src="/assets/images/pos.jpg" alt=""/>
-                    </button>
-                </div>
-            </div>
-        </div>
-    </header>
-
-    <div style=" display: flex; flex-direction: row; height: 100vh; width: 100vw;" >
-
-        <aside id="side" class="h-full w-16 flex flex-col space-y-10 items-center justify-center relative  text-white ">
-
-            <div class="group relative h-10 w-10 flex items-center justify-center rounded-lg cursor-pointer hover:text-gray-800 hover:bg-white  hover:duration-300 hover:ease-linear focus:bg-white">
-                <button onclick="goToIndex()">
-                    <svg xmlns="http://www.w3.org/2000/svg"  class="h-6 w-6" viewBox="0 0 448 512" fill="currentColor"><path fill-rule="evenodd"   d="M248 24c0-13.3-10.7-24-24-24s-24 10.7-24 24V56H168c-13.3 0-24 10.7-24 24s10.7 24 24 24h32v40H59.6C26.7 144 0 170.7 0 203.6c0 8.2 1.7 16.3 4.9 23.8L59.1 352h52.3L49 208.2c-.6-1.5-1-3-1-4.6c0-6.4 5.2-11.6 11.6-11.6H224 388.4c6.4 0 11.6 5.2 11.6 11.6c0 1.6-.3 3.2-1 4.6L336.5 352h52.3l54.2-124.6c3.3-7.5 4.9-15.6 4.9-23.8c0-32.9-26.7-59.6-59.6-59.6H248V104h32c13.3 0 24-10.7 24-24s-10.7-24-24-24H248V24zM101.2 432H346.8l16.6 32H84.7l16.6-32zm283.7-30.7c-5.5-10.6-16.5-17.3-28.4-17.3H91.5c-12 0-22.9 6.7-28.4 17.3L36.6 452.5c-3 5.8-4.6 12.2-4.6 18.7C32 493.8 50.2 512 72.8 512H375.2c22.5 0 40.8-18.2 40.8-40.8c0-6.5-1.6-12.9-4.6-18.7l-26.5-51.2z" clip-rule="evenodd" /></svg>
-                </button>
-                <span class="absolute -top-6 left-[50%] -translate-x-[50%]
-            z-20 origin-left scale-0 px-1.5 rounded-lg border
-              border-gray-300 bg-white py-1 text-sm font-bold
-            shadow-md transition-all duration-300 ease-in-out
-            group-hover:scale-100">Juegos<span></span></span>
-            </div>
-
-
-            <div class="group relative h-10 w-10 flex items-center justify-center rounded-lg cursor-pointer hover:text-gray-800 hover:bg-white  hover:duration-300 hover:ease-linear focus:bg-white">
-                <button onclick="goToInfo()">
-                    <svg xmlns="http://www.w3.org/2000/svg"  class="h-6 w-6" viewBox="0 0 192 512" fill="currentColor"><path fill-rule="evenodd" d="M48 80a48 48 0 1 1 96 0A48 48 0 1 1 48 80zM0 224c0-17.7 14.3-32 32-32H96c17.7 0 32 14.3 32 32V448h32c17.7 0 32 14.3 32 32s-14.3 32-32 32H32c-17.7 0-32-14.3-32-32s14.3-32 32-32H64V256H32c-17.7 0-32-14.3-32-32z" clip-rule="evenodd" /></svg>
-                </button>
-                <span class="absolute -top-6 left-[50%] -translate-x-[50%]
-            z-20 origin-left scale-0 px-2 rounded-lg border
-            border-gray-300 bg-white py-1 text-sm font-bold
-            shadow-md transition-all duration-300 ease-in-out
-            group-hover:scale-100">Info<span></span></span>
-            </div>
-
-            <div class="group relative h-10 w-10 flex items-center justify-center rounded-lg cursor-pointer hover:text-gray-800 hover:bg-white  hover:duration-300 hover:ease-linear focus:bg-white">
-                <button onclick="goToRules()">
-                    <svg xmlns="http://www.w3.org/2000/svg"  class="h-6 w-6" viewBox="0 0 640 512" fill="currentColor"><path fill-rule="evenodd" d="M384 32H512c17.7 0 32 14.3 32 32s-14.3 32-32 32H398.4c-5.2 25.8-22.9 47.1-46.4 57.3V448H512c17.7 0 32 14.3 32 32s-14.3 32-32 32H320 128c-17.7 0-32-14.3-32-32s14.3-32 32-32H288V153.3c-23.5-10.3-41.2-31.6-46.4-57.3H128c-17.7 0-32-14.3-32-32s14.3-32 32-32H256c14.6-19.4 37.8-32 64-32s49.4 12.6 64 32zm55.6 288H584.4L512 195.8 439.6 320zM512 416c-62.9 0-115.2-34-126-78.9c-2.6-11 1-22.3 6.7-32.1l95.2-163.2c5-8.6 14.2-13.8 24.1-13.8s19.1 5.3 24.1 13.8l95.2 163.2c5.7 9.8 9.3 21.1 6.7 32.1C627.2 382 574.9 416 512 416zM126.8 195.8L54.4 320H199.3L126.8 195.8zM.9 337.1c-2.6-11 1-22.3 6.7-32.1l95.2-163.2c5-8.6 14.2-13.8 24.1-13.8s19.1 5.3 24.1 13.8l95.2 163.2c5.7 9.8 9.3 21.1 6.7 32.1C242 382 189.7 416 126.8 416S11.7 382 .9 337.1z" clip-rule="evenodd" /></svg>
-                </button>
-                <span class="absolute -top-6 left-[50%] -translate-x-[50%]
-            z-20 origin-left scale-0 px-2 rounded-lg border
-            border-gray-300 bg-white py-1 text-sm font-bold
-            shadow-md transition-all duration-300 ease-in-out
-            group-hover:scale-100">Reglas<span></span></span>
-            </div>
-
-            <div class="group relative h-10 w-10 flex items-center justify-center rounded-lg cursor-pointer hover:text-gray-800 hover:bg-white  hover:duration-300 hover:ease-linear focus:bg-white">
-                <button onclick="goToProfile()">
-                    <svg xmlns="http://www.w3.org/2000/svg"  class="h-6 w-6" viewBox="0 0 448 512" fill="currentColor"><path fill-rule="evenodd" d="M224 256A128 128 0 1 1 224 0a128 128 0 1 1 0 256zM209.1 359.2l-18.6-31c-6.4-10.7 1.3-24.2 13.7-24.2H224h19.7c12.4 0 20.1 13.6 13.7 24.2l-18.6 31 33.4 123.9 36-146.9c2-8.1 9.8-13.4 17.9-11.3c70.1 17.6 121.9 81 121.9 156.4c0 17-13.8 30.7-30.7 30.7H285.5c-2.1 0-4-.4-5.8-1.1l.3 1.1H168l.3-1.1c-1.8 .7-3.8 1.1-5.8 1.1H30.7C13.8 512 0 498.2 0 481.3c0-75.5 51.9-138.9 121.9-156.4c8.1-2 15.9 3.3 17.9 11.3l36 146.9 33.4-123.9z" clip-rule="evenodd" /></svg>
-                </button>
-
-                <span class="absolute -top-6 left-[50%] -translate-x-[50%]
-            z-20 origin-left scale-0 px-2 rounded-lg border
-            border-gray-300 bg-white py-1 text-sm font-bold
-            shadow-md transition-all duration-300 ease-in-out
-            group-hover:scale-100">Perfil<span></span></span>
-            </div>
-
-            <div class="group relative h-10 w-10 flex items-center justify-center rounded-lg cursor-pointer hover:text-gray-800 hover:bg-white  hover:duration-300 hover:ease-linear focus:bg-white">
-                <button onclick="goToExit()">
-                    <svg xmlns="http://www.w3.org/2000/svg"  class="h-6 w-6" viewBox="0 0 512 512" fill="currentColor"><path fill-rule="evenodd"   d="M256 48a208 208 0 1 1 0 416 208 208 0 1 1 0-416zm0 464A256 256 0 1 0 256 0a256 256 0 1 0 0 512zM175 175c-9.4 9.4-9.4 24.6 0 33.9l47 47-47 47c-9.4 9.4-9.4 24.6 0 33.9s24.6 9.4 33.9 0l47-47 47 47c9.4 9.4 24.6 9.4 33.9 0s9.4-24.6 0-33.9l-47-47 47-47c9.4-9.4 9.4-24.6 0-33.9s-24.6-9.4-33.9 0l-47 47-47-47c-9.4-9.4-24.6-9.4-33.9 0z" clip-rule="evenodd" /></svg>
-                </button>
-                <span class="absolute -top-6 left-[50%] -translate-x-[50%]
-            z-20 origin-left scale-0 px-2 rounded-lg border
-            border-gray-300 bg-white py-1 text-sm font-bold
-            shadow-md transition-all duration-300 ease-in-out
-            group-hover:scale-100">Salir<span></span></span>
-            </div>
-        </aside>
-
-        <div class="flex justify-between h-full w-full">
-
-
-            <div class="flex-col items-center h-full w-full">
-                <div class="relative">
-
-                    <div class="relative flex flex-col items-center">
-                        <svg fill="#FFFFFF" width="120px" height="90px" viewBox="0 0 256 256" id="Flat" xmlns="http://www.w3.org/2000/svg">
-                            <path d="M202.82812,146.82812l-72,72a3.99853,3.99853,0,0,1-5.65625,0l-72-72a3.99957,3.99957,0,0,1,5.65625-5.65625L124,206.34277V40a4,4,0,0,1,8,0V206.34277l65.17187-65.1709a3.99957,3.99957,0,0,1,5.65625,5.65625Z"/>
-                        </svg>
-                    </div>
-
-                    <div class="wheel-container flex flex-col items-center"></div>
-                </div>
-            </div>
-
-            <div class="flex flex-col justify-center">
-
-                <div class="overflow-x-auto sm:-mx-6 lg:-mx-8">
-                    <div class="py-2 inline-block min-w-full sm:px-6 lg:px-8">
-                        <div class="overflow-hidden">
-                            <div>
-
-
-                            </div>
-                            <table class="min-w-full text-center rounded-md border-2 border-white " >
-                                <thead >
-                                        <tr>
-                                            <div id="hasWon" class="flex flex-col items-center pb-2" style="display: none">
-                                                <div class='flex flex-row bg-gray-900 h-10 w-[246px] rounded-[30px]'>
-                                                    <span class='flex flex-col justify-center text-white font-bold grow-[1] max-w-[90%] text-center'>Has ganado</span>
-                                                    <div class='w-[10%] bg-green-400 rounded-r-2xl shadow-[0_0_20px_#00C85177]'></div>
-                                                </div>
-                                            </div>
-                                            <div id="hasLost" class="flex flex-col items-center pb-2" style="display: none">
-                                                <div class='flex flex-row bg-gray-900 h-10 w-[246px] rounded-[30px]'>
-                                                    <span class='flex flex-col justify-center text-white font-bold grow-[1] max-w-[90%] text-center'>Has perdido</span>
-                                                    <div class='w-[10%] bg-red-400 rounded-r-2xl shadow-[0_0_20px_#ff444477]'></div>
-                                                </div>
-                                            </div>
-                                        </tr>
-                                </thead>
-
-                                <tbody>
-                                    <tr class="border-b ">
-                                        <th scope="col" class="text-sm font-medium text-white px-12 py-4">
-                                            Seleccion
-                                        </th>
-
-                                    </tr>
-                                    <tr >
-                                        <td class="text-sm text-white font-medium px-6 py-4 whitespace-nowrap  ">
-                                            <div class="flex flex-row justify-evenly">
-                                                <div class="flex flex-col items-center">
-                                                    <p class="pb-2">Rojo</p>
-                                                    <div class="content">
-                                                        <label class="checkBoxR">
-                                                            <input id="checkboxRojo" type="checkbox">
-                                                            <div class="transition"></div>
-                                                        </label>
-                                                    </div>
-                                                </div>
-                                                <div class="flex flex-col items-center">
-                                                    <p class="pb-2">Verde</p>
-                                                    <div class="content ">
-                                                        <label class="checkBoxV">
-                                                            <input id="checkboxVerde" type="checkbox">
-                                                            <div class="transition"></div>
-                                                        </label>
-                                                    </div>
-                                                </div>
-                                                <div class="flex flex-col items-center">
-                                                    <p class="pb-2">Negro</p>
-                                                    <div class="content ">
-                                                        <label class="checkBoxN">
-                                                            <input id="checkboxNegro" type="checkbox">
-                                                            <div class="transition"></div>
-                                                        </label>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                    <tr class="border-b ">
-                                        <td class="text-sm text-gray-900 font-medium px-6 py-4 whitespace-nowrap">
-                                            <div id="ColorDivCantidad" class="inputbox">
-                                                <input required="required" type="number" id="cantidadAColor">
-                                                <span>Cantidad</span>
-                                                <i></i>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                    <tr >
-                                        <td class="text-sm text-white font-medium px-6 py-4 whitespace-nowrap  ">
-                                            <div class="flex flex-row justify-evenly">
-                                                <div class="flex flex-col items-center">
-                                                    <p class="pb-2">Par</p>
-                                                    <div class="content">
-                                                        <label class="checkBox">
-                                                            <input id="checkboxPar" type="checkbox">
-                                                            <div class="transition"></div>
-                                                        </label>
-                                                    </div>
-                                                </div>
-                                                <div class="flex flex-col items-center">
-                                                    <p class="pb-2">Impar</p>
-                                                    <div class="content ">
-                                                        <label class="checkBox">
-                                                            <input id="checkboxImpar" type="checkbox">
-                                                            <div class="transition"></div>
-                                                        </label>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                    <tr class="border-b ">
-                                        <td class="text-sm text-gray-900 font-medium px-6 py-4 whitespace-nowrap">
-                                            <div id="ParImparDivCantidad" class="inputbox">
-                                                <input required="required" type="number" id="cantidadAParidad">
-                                                <span>Cantidad</span>
-                                                <i></i>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                    <tr >
-                                        <td class="text-sm text-white font-medium px-6 py-4 whitespace-nowrap  ">
-                                            <div class="flex flex-row justify-evenly">
-                                                <div class="flex flex-col items-center">
-                                                    <p class="pb-2">1era</p>
-                                                    <div class="content">
-                                                        <label class="checkBox">
-                                                            <input id="checkboxPrimera" type="checkbox">
-                                                            <div class="transition"></div>
-                                                        </label>
-                                                    </div>
-                                                </div>
-                                                <div class="flex flex-col items-center">
-                                                    <p class="pb-2">2da</p>
-                                                    <div class="content ">
-                                                        <label class="checkBox">
-                                                            <input id="checkboxSegunda" type="checkbox">
-                                                            <div class="transition"></div>
-                                                        </label>
-                                                    </div>
-                                                </div>
-                                                <div class="flex flex-col items-center">
-                                                    <p class="pb-2">3era</p>
-                                                    <div class="content ">
-                                                        <label class="checkBox">
-                                                            <input id="checkboxTercera" type="checkbox">
-                                                            <div class="transition"></div>
-                                                        </label>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                    <tr class="border-b ">
-                                        <td class="text-sm text-gray-900 font-medium px-6 py-4 whitespace-nowrap">
-                                            <div id="decDivCantidad" class="inputbox">
-                                                <input required="required" type="number" id="cantidadADocena">
-                                                <span>Cantidad</span>
-                                                <i></i>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                    <tr class="invisible">
-                                        <td class="text-sm text-gray-900 font-medium px-6 py-4 whitespace-nowrap">
-                                            <div id="123" class="inputbox">
-                                                <input required="required" type="number" id="qwe">
-                                                <span>Cantidad</span>
-                                                <i></i>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                    <tr class="border-b ">
-                                        <td class="text-sm text-gray-900 font-medium px-6 py-4 whitespace-nowrap">
-                                            <div class="flex flex-col items-center">
-                                                <div class="flex flex-row">
-                                                    <p  class="text-white pb-5">Balance: </p>
-                                                    <p id="tagBalance" class="text-white pl-0.5"></p>
-
-                                                </div>
-                                                <button id="btnSpin" class="play" > Jugar </button>
-                                            </div>
-                                        </td>
-                                    </tr>
-
-                                </tbody>
-                            </table>
-
-
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
+        <a class="btn btn-ghost btn-sm" href="/rules#ruleta">¿Cómo se juega?</a>
     </div>
 
+    <div class="rl">
+        <!-- Columna izquierda: rueda, últimos números y resultado -->
+        <section class="rl-stage" aria-labelledby="rl-title">
+            <div class="rl-history" aria-label="Últimos números">
+                <span class="rl-history-label">Últimos</span>
+                <ol class="rl-balls" id="rl-history"></ol>
+            </div>
 
+            <div class="rl-wheel-wrap" id="rl-wheel-wrap">
+                <canvas id="rl-wheel" class="rl-wheel" role="img" aria-label="Rueda de la ruleta"></canvas>
+            </div>
 
+            <div class="rl-result" id="rl-result" data-state="idle">
+                <p class="sr-only" id="rl-announce" aria-live="polite" aria-atomic="true"></p>
+                <div class="rl-result-idle" id="rl-result-idle">
+                    <strong>Haz tu apuesta</strong>
+                    <span class="muted">Elige una ficha, toca las casillas y pulsa Girar.</span>
+                </div>
+                <div class="rl-result-spin" id="rl-result-spin" hidden>
+                    <span class="rl-spinner" aria-hidden="true"></span>
+                    <strong>Girando…</strong>
+                </div>
+                <div class="rl-result-done" id="rl-result-done" hidden>
+                    <div class="rl-result-top">
+                        <span class="rl-ball rl-ball-lg" id="rl-res-ball"></span>
+                        <div class="rl-result-text">
+                            <span class="rl-result-kicker">Cayó</span>
+                            <strong id="rl-res-slot"></strong>
+                        </div>
+                        <div class="rl-net" id="rl-res-net">
+                            <span class="rl-net-label" id="rl-res-net-label"></span>
+                            <span class="rl-net-amount num" id="rl-res-net-amount"></span>
+                        </div>
+                    </div>
+                    <p class="rl-bd-title" id="rl-res-bet"></p>
+                    <ul class="rl-breakdown" id="rl-res-list" aria-label="Lo que apostaste en este giro"></ul>
+                    <button type="button" class="btn btn-sm btn-ghost rl-res-repeat" id="rl-res-repeat">Repetir esta apuesta</button>
+                </div>
+            </div>
+        </section>
 
+        <!-- Columna derecha: mesa de apuestas -->
+        <section class="rl-table card" aria-labelledby="rl-table-title">
+            <h2 id="rl-table-title" class="sr-only">Mesa de apuestas</h2>
+            <fieldset class="rl-fieldset" id="rl-fieldset">
+                <legend class="sr-only">Apuestas</legend>
+
+                <div class="rl-group">
+                    <div class="rl-group-head"><span>Valor de la ficha</span></div>
+                    <div class="rl-chips" id="rl-chips" role="group" aria-label="Valor de la ficha"></div>
+                </div>
+
+                <div class="rl-group">
+                    <div class="rl-group-head"><span>Color</span></div>
+                    <div class="rl-cells rl-cells-3" id="rl-g-color"></div>
+                </div>
+                <div class="rl-group">
+                    <div class="rl-group-head"><span>Par o impar</span><span class="rl-pay-hint">El 0 no cuenta</span></div>
+                    <div class="rl-cells rl-cells-2" id="rl-g-parity"></div>
+                </div>
+                <div class="rl-group">
+                    <div class="rl-group-head"><span>Grupo de números</span><span class="rl-pay-hint">El 0 no cuenta</span></div>
+                    <div class="rl-cells rl-cells-3" id="rl-g-dozen"></div>
+                </div>
+
+                <div class="rl-tools">
+                    <button type="button" class="btn btn-sm btn-ghost" id="rl-undo">Deshacer</button>
+                    <button type="button" class="btn btn-sm btn-ghost" id="rl-clear">Limpiar</button>
+                    <button type="button" class="btn btn-sm btn-ghost" id="rl-repeat">Repetir apuesta</button>
+                </div>
+            </fieldset>
+
+            <div class="rl-spinbar">
+                <p class="rl-summary">
+                    <span>Total apostado: <b class="num" id="rl-total">0</b><span class="rl-maxwin" id="rl-maxwin"></span></span>
+                    <span class="rl-dot" aria-hidden="true">·</span>
+                    <span>Saldo: <b class="num" data-balance>…</b></span>
+                </p>
+                <p class="rl-msg" id="rl-msg" aria-live="polite"></p>
+                <button type="button" class="btn btn-gold btn-lg btn-block rl-spin" id="rl-spin" disabled>Girar</button>
+            </div>
+        </section>
+    </div>
+</main>
 </body>
-<script src="/scripts/roulette.js" type="module"></script>
-<script src="https://kit.fontawesome.com/549e1abe3e.js" crossorigin="anonymous"></script>
 </html>

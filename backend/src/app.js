@@ -12,6 +12,8 @@ function createApp(options = {}) {
     app.disable('x-powered-by');
     app.use(helmet());
     app.use(express.json({ limit: '10kb' }));
+    // Respuestas con datos del usuario: nunca en caché del navegador ni de intermediarios.
+    app.use((req, res, next) => { res.set('Cache-Control', 'no-store'); next(); });
 
     app.use('/api', buildRouter(options));
     app.use(notFoundHandler);

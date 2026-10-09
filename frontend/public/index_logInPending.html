@@ -1,178 +1,111 @@
-
 <!DOCTYPE html>
-<html lang="en">
+<html lang="es" data-auth="guest">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Inicio</title>
-    <link rel="stylesheet" href="styles/output.css">
-    <link rel="icon" href="assets/images/icon.png" type="image/png">
-    <link rel="stylesheet" href="styles/index.css">
-    <script src="scripts/config.js"></script>
-
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>FrioMx · Casino social con fichas virtuales</title>
+    <meta name="description" content="Juega Ruleta, Hi-Lo y Minas con fichas virtuales. Sin dinero real.">
+    <link rel="icon" href="/assets/images/icon.png" type="image/png">
+    <link rel="stylesheet" href="/styles/app.css">
+    <link rel="stylesheet" href="/styles/pages.css">
+    <script src="/scripts/app.js"></script>
 </head>
 <body>
-
-<div id="preloader">
-    <div class="cardL">
-        <div class="loader">
-            <p>Frio</p>
-            <div class="words">
-                <span class="word">apuestas</span>
-                <span class="word">juegos</span>
-                <span class="word">ruleta</span>
-                <span class="word">casino</span>
-                <span class="word">diversion</span>
-            </div>
+    <header class="public-top">
+        <a class="brand" href="/" aria-label="FrioMx, inicio">
+            <img src="/assets/images/icon.png" alt="" width="30" height="30"><span>Frio<b>Mx</b></span>
+        </a>
+        <div class="actions">
+            <a class="btn btn-ghost" href="/logIn">Iniciar sesión</a>
+            <a class="btn btn-primary" href="/register">Crear cuenta</a>
         </div>
-    </div>
+    </header>
 
-</div>
-
-
-<div class="h-screen w-full bg-white relative flex overflow-hidden ">
-
-
-
-
-    <div class="w-full h-full flex flex-col justify-between">
-        <header id="nav" class="h-20 w-full flex items-center relative justify-between px-5 space-x-10 dark:bg-[#1a2c38] ">
-            <div id="mainText" class="invisible px-3 dark:text-white text-6xl ">
-                Frio
-            </div>
-
-            <div class=" flex flex-none ">
-                <img src="/assets/images/full_logo.png" alt="iconOnMainPage">
-            </div>
-
-            <div class="flex flex-shrink-0 items-center space-x-4 text-white">
-
-
-                <div id="prof" class="flex px-3 space-x-3">
-                    <button id="buttonSingIn" class="btn" onclick="goToInit()" >
-                        Iniciar Sesion
-                    </button>
+    <main class="public-main" id="main">
+        <section class="hero" aria-labelledby="hero-title">
+            <div>
+                <span class="eyebrow">Casino social</span>
+                <h1 id="hero-title">Frio<b>Mx</b></h1>
+                <p class="lead">Ruleta, Hi-Lo y Minas con fichas virtuales. Sin dinero real.</p>
+                <p class="gift"><span class="coin" aria-hidden="true"></span>Recibe 1,000 fichas al registrarte</p>
+                <div class="cta">
+                    <a class="btn btn-primary btn-lg" href="/register">Crear cuenta</a>
+                    <a class="btn btn-lg" href="/logIn">Iniciar sesión</a>
                 </div>
-
-                <div id="reg" class="flex px-3 space-x-3">
-                    <button id="buttonRegis" class="btn" onclick="goToReg()">
-                        Registrarse
-                    </button>
-                </div>
+                <p class="fine">Las fichas no se compran ni se cambian por dinero. Solo es para divertirte.</p>
             </div>
-        </header>
+            <div class="hero-art" aria-hidden="true">
+                <div class="frame art-hilo"><img src="/assets/images/cleanImages/hiloCar.jpg" alt=""></div>
+                <div class="frame art-roulette"><img src="/assets/images/cleanImages/rouletteCar.jpg" alt=""></div>
+                <div class="frame art-mines"><img src="/assets/images/cleanImages/mine.jpg" alt=""></div>
+            </div>
+        </section>
 
-
-
-
-
-        <main id="mains" class="max-w-full h-full flex relative overflow-y-hidden  ">
-
-            <div class="h-full w-full m-4 flex flex-wrap items-start justify-start rounded-tl grid-flow-col auto-cols-max gap-4 overflow-y-scroll">
-
-
-                <div class="flex items-center justify-center w-full  py-24 sm:py-8 px-4">
-
-                    <div class="w-full relative flex items-center justify-center">
-
-
-
-                        <div class="w-full h-full mx-auto overflow-x-hidden overflow-y-hidden">
-                            <div class="flex flex-row justify-between items-center">
-                                <div id="gamesTitle" class="px-3 dark:text-white text-4xl py-4">
-                                    <i class="fa-solid fa-fire fa-xs"></i> Juegos originales
-                                </div>
-                                <div class="flex flex-row">
-                                    <button aria-label="slide backward" class="focus:outline-none focus:bg-gray-400 focus:ring-2 focus:ring-offset-2 focus:ring-gray-400 cursor-pointer" id="prev">
-                                        <svg class="dark:text-white" width="8" height="14" viewBox="0 0 8 14" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M7 1L1 7L7 13" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" /></svg>
-                                    </button>
-                                    <button aria-label="slide forward" class="ml-2 focus:outline-none focus:bg-gray-400 focus:ring-2 focus:ring-offset-2 focus:ring-gray-400" id="next">
-                                        <svg class="dark:text-white" width="8" height="14" viewBox="0 0 8 14" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M1 1L7 7L1 13" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" /></svg>
-                                    </button>
-                                </div>
-                            </div>
-
-                            <div id="slider" class="h-full flex lg:gap-8 md:gap-6 gap-14 items-center justify-start transition ease-out duration-700">
-                                <div class="flex flex-shrink-0 relative w-full sm:w-auto">
-                                    <a id="cardHov3" onclick="goToInit()">
-                                        <img src="/assets/images/cleanImages/rouletteCar.jpg" alt="black chair and white table" class="object-cover object-center w-80" />
-                                    </a>
-                                </div>
-                                <div class="flex flex-shrink-0 relative w-full sm:w-auto">
-                                    <a id="cardHov2" onclick="goToInit()">
-                                        <img src="/assets/images/cleanImages/hiloCar.jpg" alt="black chair and white table" class="object-cover object-center w-80" />
-                                    </a>
-                                </div>
-                                <div class="flex flex-shrink-0 relative w-full sm:w-auto">
-                                    <a id="cardHov4" onclick="goToInit()">
-                                        <img src="/assets/images/cleanImages/mine.jpg" alt="black chair and white table" class="object-cover object-center w-80" />
-                                    </a>
-                                </div>
-                                <div class="flex flex-shrink-0 relative w-full sm:w-auto">
-                                    <a class="cardHov9" onclick="goToInit()">
-                                        <img src="/assets/images/cleanImages/slideCar.jpg" alt="black chair and white table" class="object-cover object-center w-80" />
-                                    </a>
-                                </div>
-
-                                <div class="flex flex-shrink-0 relative w-full sm:w-auto">
-                                    <a class="cardHov9" onclick="goToInit()">
-                                        <img src="/assets/images/cleanImages/pokerCar.jpg" alt="black chair and white table" class="object-cover object-center w-80" />
-                                    </a>
-                                </div>
-                                <div class="flex flex-shrink-0 relative w-full sm:w-auto">
-                                    <a class="cardHov9" onclick="goToInit()">
-                                        <img src="/assets/images/cleanImages/limboCar.jpg" alt="black chair and white table" class="object-cover object-center w-80" />
-                                    </a>
-                                </div>
-                                <div class="flex flex-shrink-0 relative w-full sm:w-auto">
-                                    <a class="cardHov9" onclick="goToInit()">
-                                        <img src="/assets/images/cleanImages/diamondsCart.jpg" alt="black chair and white table" class="object-cover object-center w-80" />
-                                    </a>
-                                </div>
-
-
-                            </div>
-                        </div>
-
+        <section class="section" aria-labelledby="games-title">
+            <div class="section-head">
+                <h2 id="games-title">Nuestros juegos</h2>
+                <p>Rondas rápidas y reglas claras. Siempre ves cuánto puedes ganar, en fichas.</p>
+            </div>
+            <div class="game-grid">
+                <a class="game-card" href="/register">
+                    <div class="art art-roulette"><span class="game-ico ico-roulette" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20m0 3a7 7 0 1 1 0 14 7 7 0 0 1 0-14m0 4a3 3 0 1 0 0 6 3 3 0 0 0 0-6"/></svg></span><img src="/assets/images/cleanImages/rouletteCar.jpg" alt="Ruleta" loading="lazy"></div>
+                    <div class="body">
+                        <h3>Ruleta</h3>
+                        <p>Apuesta a color, par o impar o un grupo de 12 números.</p>
+                        <div class="pay"><span class="pay-note">Hasta 35 veces si sale el 0</span><span class="go">Regístrate para jugar →</span></div>
                     </div>
-                </div>
-
-
-
-
+                </a>
+                <a class="game-card" href="/register">
+                    <div class="art art-hilo"><span class="game-ico ico-hilo" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3h9a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2m13 3 1.5.5a2 2 0 0 1 1.2 2.5l-3.7 11"/></svg></span><img src="/assets/images/cleanImages/hiloCar.jpg" alt="Hi-Lo" loading="lazy"></div>
+                    <div class="body">
+                        <h3>Hi-Lo</h3>
+                        <p>¿La siguiente carta es mayor o menor?</p>
+                        <div class="pay"><span class="pay-note">Ves cuánto ganas antes de elegir</span><span class="go">Regístrate para jugar →</span></div>
+                    </div>
+                </a>
+                <a class="game-card" href="/register">
+                    <div class="art art-mines"><span class="game-ico ico-mines" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 21a7 7 0 1 0 0-14 7 7 0 0 0 0 14m4.5-12.5 2-2M17 4l1.5-1.5M19 6.5l1.5-.5M8 13.5a3 3 0 0 1 3-3"/></svg></span><img src="/assets/images/cleanImages/mine.jpg" alt="Minas" loading="lazy"></div>
+                    <div class="body">
+                        <h3>Minas</h3>
+                        <p>Destapa casillas en un tablero de 5×5 sin pisar una mina.</p>
+                        <div class="pay"><span class="pay-note">Cada casilla segura sube tu premio; cobra cuando quieras</span><span class="go">Regístrate para jugar →</span></div>
+                    </div>
+                </a>
             </div>
-        </main>
-    </div>
+        </section>
 
-</div>
+        <section class="section" aria-labelledby="how-title">
+            <div class="section-head">
+                <h2 id="how-title">¿Cómo funciona?</h2>
+                <p>En menos de un minuto ya estás jugando.</p>
+            </div>
+            <ol class="steps" role="list">
+                <li class="step card">
+                    <div class="n">1</div>
+                    <h3>Crea tu cuenta</h3>
+                    <p>Solo nombre, edad, correo y contraseña. Debes tener 18 años o más.</p>
+                </li>
+                <li class="step card">
+                    <div class="n">2</div>
+                    <h3>Recibe 1,000 fichas</h3>
+                    <p>Te las damos al registrarte. Son virtuales y no tienen valor real.</p>
+                </li>
+                <li class="step card">
+                    <div class="n">3</div>
+                    <h3>Elige un juego</h3>
+                    <p>Ruleta, Hi-Lo o Minas. Tu historial y tu saldo se guardan en tu perfil.</p>
+                </li>
+            </ol>
+        </section>
+    </main>
 
-
-<script>
-    const next = document.getElementById('next');
-    const prev = document.getElementById('prev')
-    function goNext()
-    {
-        defaultTransform = defaultTransform - 398;
-        var slider = document.getElementById("slider");
-        if (Math.abs(defaultTransform) >= slider.scrollWidth / 1.7) defaultTransform = 0;
-        slider.style.transform = "translateX(" + defaultTransform + "px)";
-    }
-
-    next.addEventListener('click', goNext);
-
-    function goPrev()
-    {
-        var slider = document.getElementById("slider");
-        if (Math.abs(defaultTransform) === 0) defaultTransform = 0;
-        else defaultTransform = defaultTransform + 398;
-        slider.style.transform = "translateX(" + defaultTransform + "px)";
-    }
-    prev.addEventListener("click", goPrev);
-</script>
-
-
-
+    <footer class="public-foot">
+        <span>FrioMx · Proyecto escolar del ITESO. Fichas virtuales, sin dinero real.</span>
+        <nav aria-label="Enlaces del pie">
+            <a href="/rules">Reglas</a>
+            <a href="/info">Acerca de</a>
+            <a href="/logIn">Iniciar sesión</a>
+        </nav>
+    </footer>
 </body>
-<script src="/scripts/indexLoading.js"></script>
-<script src="https://kit.fontawesome.com/549e1abe3e.js" crossorigin="anonymous"></script>
 </html>

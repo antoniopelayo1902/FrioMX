@@ -85,12 +85,14 @@ Todas las rutas van bajo `/api`. Las marcadas con candado requieren `Authorizati
 | POST /profile/upload | 🔒 | multipart `profileImage` | 200 `{success, profileImage}` (URL firmada) |
 | DELETE /profile/delete | 🔒 | | 200 `{success}` |
 | GET /profile/image | 🔒 | | 200 `{success, profileImage}` (URL firmada, 15 min) |
-| POST /games/hi-lo/deal | 🔒 | `{betAmount}` | 201 `{roundId, oldCard, newBalance}` |
-| POST /games/hi-lo | 🔒 | `{roundId, prediction:"higher"\|"lower"}` | 200 `{won, oldCard, newCard, amountChange, newBalance}` |
-| POST /games/roulette | 🔒 | `{bets:[{type, value, amount}]}` | 200 `{winningSlot, winningIndex, results, totalAmountChange, newBalance}` |
-| POST /games/mines | 🔒 | `{betAmount, won}` | 200 `{won, amountChange, newBalance}`. Temporal de Fase 2, se elimina en Etapa 5 |
-| POST /games/mines/start | 🔒 | `{betAmount}` | 201 `{gameId, boardSize:5, minesCount:5, newBalance}` |
+| GET /games/hi-lo/active | 🔒 | | 200 `{round: null \| {roundId, oldCard, bet, options}}` |
+| POST /games/hi-lo/deal | 🔒 | `{betAmount}` | 201 `{roundId, oldCard, bet, options:{higher, lower}, newBalance}`; cada opción es `{multiplier, chance}` o `null`. 409 ROUND_ACTIVE (con `gameId`) si ya hay una ronda abierta |
+| POST /games/hi-lo | 🔒 | `{roundId, prediction:"higher"\|"lower"}` | 200 `{won, tie, oldCard, newCard, prediction, bet, payout, amountChange, newBalance}` |
+| POST /games/roulette | 🔒 | `{bets:[{type, value, amount}]}` | 200 `{winningSlot, winningIndex, results:[{type, value, amount, won, change}], totalBet, totalAmountChange, newBalance}` |
+| GET /games/mines/active | 🔒 | | 200 `{round: null \| vista de partida}` (ver 5.3) |
+| POST /games/mines/start | 🔒 | `{betAmount}` | 201 vista de partida + `newBalance`. 409 ROUND_ACTIVE si ya hay una |
 | POST /games/mines/reveal | 🔒 | `{gameId, x, y}` | 200 ver 5.3 |
+| POST /games/mines/cashout | 🔒 | `{gameId}` | 200 `{status:"CASHED", payout, amountChange, mines, newBalance}`; 400 si no hay casillas destapadas |
 | GET /wallet/packages | 🔒 | | 200 `[{packageId, chips}]` |
 | POST /wallet/recharges | 🔒 | `{packageId}` + cabecera `Idempotency-Key` (UUID) | 202 `{rechargeId, status}` |
 | GET /wallet/recharges/:rechargeId | 🔒 | | 200 `{rechargeId, status, chips, createdAt, completedAt}` |
@@ -98,7 +100,7 @@ Todas las rutas van bajo `/api`. Las marcadas con candado requieren `Authorizati
 | GET /leaderboard/last | 🔒 | `?weekId=` opcional, solo semanas pasadas | 200 `{weekId, top:[{rank, name, net, prize}]}` o 404. Sin `weekId` regresa la semana anterior a la actual |
 | GET /leaderboard/weeks | 🔒 | | 200 `[weekId]` de las semanas cerradas, de la más reciente a la más antigua |
 
-Se eliminan respecto a la base: `PUT /user/balance`, `POST /user/activity`, las rutas de pagos, todas las rutas `/assets/*` (el frontend no las usa, solo están declaradas en `config.js`), y los parámetros `?id=` y `userId` en el cuerpo. `POST /games/mines` se conserva solo en Fase 2, ya sobre DynamoDB y con el usuario del token, y se elimina cuando entra minas en el servidor.
+Se eliminan respecto a la base: `PUT /user/balance`, `POST /user/activity`, las rutas de pagos, todas las rutas `/assets/*` (el frontend no las usa, solo están declaradas en `config.js`), y los parámetros `?id=` y `userId` en el cuerpo. La ruta de la base que recibía `won` del navegador para minas ya no existe: minas se resuelve en el servidor desde Fase 2 (§5.3).
 
 Códigos de error comunes:
 
@@ -125,7 +127,7 @@ Validaciones de entrada:
 - `betAmount` y cada `amount` de ruleta: entero, `1 <= x <= 10000`. Suma de la ruleta `<= 10000`. Máximo 20 apuestas por giro.
 - Ruleta: `type` en `color|parity|dozen`. `value` en `Rojo|Negro|Verde`, `par|impar`, `1|2|3` respectivamente.
 - `email`: se normaliza a minúsculas y sin espacios, formato validado, máximo 254 caracteres. `name`: 1 a 40 caracteres. `password`: al menos 8 caracteres y como máximo 72 bytes en UTF-8 (`Buffer.byteLength`), que es el límite real de bcrypt. `age`: entero 18 a 99. El backend convierte `age` con `Number()` antes de validar, porque el formulario la manda como texto.
-- `x`, `y`: enteros 0 a 4. `gameId`, `roundId` e `Idempotency-Key`: UUID v4. `rechargeId`: UUID v5, porque se deriva de la clave (`uuid.validate(x) && uuid.version(x) === 5`). `won` en `POST /games/mines`: booleano.
+- `x`, `y`: enteros 0 a 4. `gameId`, `roundId` e `Idempotency-Key`: UUID v4. `rechargeId`: UUID v5, porque se deriva de la clave (`uuid.validate(x) && uuid.version(x) === 5`).
 - Foto de perfil: campo `profileImage`, mimetype `image/jpeg|image/png|image/webp`, máximo 5 MB (multer con `limits.fileSize`). Fuera de eso, 400 VALIDATION_ERROR.
 - Cuerpo JSON máximo 10 KB (`express.json({limit:"10kb"})`).
 - `helmet` se monta solo en el backend (`/api`), que responde JSON. El servidor del frontend no lo usa: su política de contenido por defecto forzaría HTTPS en un sitio HTTP y bloquearía las fotos de S3.
@@ -183,29 +185,28 @@ Si falla la condición 1 → 409 EMAIL_IN_USE. Después se crea la suscripción 
 
 **Cambio de correo.** Si el correo nuevo normalizado es igual al actual se responde 200 sin cambios (una transacción no puede tocar dos veces el mismo ítem). Si no, `TransactWriteItems`: Delete user-emails viejo con `userId = :me`, Put nuevo con `attribute_not_exists(email)`, Update users `SET email`. Luego se crea la suscripción nueva y se intenta eliminar la anterior con `Unsubscribe` usando el ARN guardado. Cualquier error de `Unsubscribe` se registra y no hace fallar la petición. SNS no permite borrar una suscripción pendiente de confirmar, que desaparece sola a las 48 horas. Si alguien la confirma antes, recibe los avisos de ese jugador. Es una limitación aceptada.
 
-**Cambio de contraseña.** Update users `SET passwordHash` (bcrypt, costo 10). Se usa `bcryptjs`, que ya trae la base y es JavaScript puro, así el paquete armado en el runner de GitHub corre en Amazon Linux sin compilar nada nativo.
+**Cambio de contraseña y de correo.** Ambos exigen `currentPassword` (403 WRONG_PASSWORD si no coincide). La contraseña se guarda con Update users `SET passwordHash, pwdChangedAt` (bcrypt, costo 10) y la respuesta trae un `token` nuevo. `requireAuth` rechaza los tokens con `iat` anterior a `pwdChangedAt`, así un token robado deja de servir al cambiar la contraseña. El nombre no admite `<` ni `>` y el frontend pinta todo dato del usuario con `textContent`. El login compara contra un hash fijo cuando el correo no existe, para que el tiempo de respuesta no revele qué correos están registrados. Se usa `bcryptjs`, que ya trae la base y es JavaScript puro, así el paquete armado en el runner de GitHub corre en Amazon Linux sin compilar nada nativo.
 
-**Reparto de hi-lo.** El reparto cobra la apuesta, igual que `start` en minas. Si fuera gratis, un jugador podría pedir cartas sin costo hasta que saliera una favorable y solo entonces apostar. `POST /games/hi-lo/deal` genera `oldCard` y ejecuta `TransactWriteItems`:
-1. Update users `SET balance = balance - :bet, lastPlayedAt = :now` con `balance >= :bet`.
-2. Put game-rounds `{gameId: roundId, userId, game:"hilo", oldCard, bet, weekId: <semana actual>, status:"ACTIVE", expiresAt: ahora+3600}`.
-3. Update weekly-stats (semana actual) `ADD net :net, gamesPlayed :one SET #name = :name` con `:net = -bet`.
-Una ronda abandonada pierde la apuesta, ya contada en el ranking.
+**Rondas con estado (hi-lo y minas).** El reparto de hi-lo y el `start` de minas cobran la apuesta (si fuera gratis, un jugador podría pedir cartas hasta que saliera una favorable). Cada usuario guarda un puntero a su ronda abierta de cada juego (`activeHiloId`/`activeHiloExp`, `activeMinesId`/`activeMinesExp`). Al abrir, `TransactWriteItems`:
+1. Update users `SET balance = balance - :bet, lastPlayedAt, <puntero> = :id, <exp> = :exp` con `balance >= :bet AND (attribute_not_exists(<puntero>) OR <exp> < :ahora)`. Si falla, se relee el usuario: con ronda viva → 409 ROUND_ACTIVE con su `gameId`; si no → 409 INSUFFICIENT_FUNDS.
+2. Put game-rounds `{gameId, userId, game, bet, weekId, activitySk, status:"ACTIVE", version:0, expiresAt: ahora+3600, ...}` (`oldCard` en hi-lo; `mines` y `revealed` en minas).
+3. Put activity con `attribute_not_exists(sk)`, `result:"EN_CURSO"` y `balance = -bet`. Así una ronda abandonada queda en el historial como pérdida y el historial siempre cuadra con el saldo.
+4. Update weekly-stats (semana actual) `ADD net :net, gamesPlayed :one SET #name = :name` con `:net = -bet`.
 
-**Jugada de hi-lo.** GetItem consistente de la ronda: si no existe o `expiresAt` ya pasó, 404. Si es de otro usuario o no es `hilo`, 403. Si no está `ACTIVE`, 409 GAME_FINISHED. `newCard` sale del generador y `net` del motor (§5.1). `TransactWriteItems`:
-1. Update game-rounds `SET status = "DONE"` con `status = ACTIVE AND userId = :me`, para que una ronda no se juegue dos veces (si falla, 409 GAME_FINISHED).
-2. Put activity con `attribute_not_exists(sk)` y `balance = net`.
-3. Solo si gana: Update users `ADD balance :payout` con `:payout = bet + net` (devuelve la apuesta más la ganancia).
-4. Solo si gana: Update weekly-stats de la semana guardada en la ronda `ADD net :payout` (sobre el −bet del reparto deja +net).
-Responde `{won, oldCard, newCard, amountChange: net, newBalance}`, con el mismo significado que en la base.
+`GET /games/{hi-lo|mines}/active` sigue el puntero y regresa la ronda si sigue `ACTIVE` y no expiró, para que el navegador la retome al recargar.
+
+**Cierre de ronda.** Jugada de hi-lo, mina pisada, cobro de minas o las 20 casillas: GetItem consistente de la ronda (404 si no existe o expiró, 403 si es de otro usuario o de otro juego, 409 GAME_FINISHED si no está `ACTIVE`) y luego `TransactWriteItems`:
+1. Update game-rounds `SET status = WON|LOST|CASHED, version = version + 1` con `status = ACTIVE AND version = :v`. Si falla y la ronda ya no está activa → 409 GAME_FINISHED, si no → 409 CONFLICT. Así dos clics simultáneos nunca pagan dos veces.
+2. Update users `ADD balance :payout REMOVE <puntero>, <exp>`.
+3. Put activity sobre el mismo `sk` de la apertura con el resultado final (`GANADA`, `PERDIDA` o `IGUAL`, `balance = payout - bet`).
+4. Solo si `payout > 0`: Update weekly-stats de la semana guardada en la ronda `ADD net :payout` (sobre el −bet de la apertura deja el neto).
 
 **Jugada de un paso (ruleta).** Se calcula `net` con el motor. Luego `TransactWriteItems`:
 1. Update users `SET balance = balance + :net, lastPlayedAt = :now` con `balance >= :bet`.
 2. Put activity con `attribute_not_exists(sk)`.
 3. Update weekly-stats `ADD net :net, gamesPlayed :one SET #name = :name`.
 
-Si se cancela por la condición 1 → 409 INSUFFICIENT_FUNDS. Lo mismo aplica al ítem 1 del reparto de hi-lo y de `start` en minas. El motivo se lee de `CancellationReasons` de `TransactionCanceledException`, en el orden de los ítems. Si se cancela por `TransactionConflict` se reintenta hasta 3 veces con espera corta y si sigue → 409 CONFLICT. `newBalance` se obtiene con un GetItem consistente después de la transacción.
-
-**Minas temporal (Fase 2).** Misma transacción de 3 ítems con `net = won ? 2*bet : -bet`, que es la regla de la base, con el usuario del token y la condición de saldo. El navegador sigue decidiendo `won`. Es una brecha conocida que se cierra en Etapa 5.
+Si se cancela por la condición 1 → 409 INSUFFICIENT_FUNDS. El motivo se lee de `CancellationReasons` de `TransactionCanceledException`, en el orden de los ítems. Si se cancela por `TransactionConflict` se reintenta hasta 3 veces con espera corta y si sigue → 409 CONFLICT. `newBalance` se obtiene con un GetItem consistente después de la transacción.
 
 **Recarga (backend).** `rechargeId = uuidv5(userId + ":" + idempotencyKey, NAMESPACE_FRIOMX)`. Primero GetItem de la recarga por `rechargeId`. Si ya existe y es de otro usuario → 403. Si existe y está `PENDING` se vuelve a encolar (el consumidor es idempotente) y se responde 202 con el estado. Si existe y está `COMPLETED` se responde 202 con ese estado. Así un reintento nunca choca con el límite diario. Si no existe, `TransactWriteItems`:
 1. Update users. Dos variantes, se intenta A y si falla su condición se intenta B:
@@ -221,35 +222,34 @@ Resultado:
 
 ## 5. Motor de juegos (`services/gameEngine.js`)
 
-Funciones puras, sin acceso a AWS, para probarlas con unidades. El aleatorio se inyecta (`rng = crypto.randomInt` por defecto) para poder fijarlo en pruebas. Las reglas y pagos de ruleta y minas se conservan de la base. En hi-lo se conservan las cartas y la mecánica, pero se cambian los pagos (§5.1). En todos, los pagos se redondean hacia abajo a enteros.
+Funciones puras, sin acceso a AWS, para probarlas con unidades. El aleatorio se inyecta (`rng = crypto.randomInt` por defecto) para poder fijarlo en pruebas. Todos los juegos devuelven 95% del pago justo.
+
+**Redondeo.** Las fichas son enteras y todo pago se redondea hacia abajo (`floor`). Es determinista: el monto que la pantalla muestra antes de jugar (`options[].payout` en hi-lo, `cashoutAmount` y `nextCashoutAmount` en minas) es exactamente el que se paga. Con apuestas muy chicas el redondeo puede dejar la ganancia en 0, y la interfaz lo avisa antes de elegir.
 
 ### 5.1 Hi-lo
 
-- Carta: `rng(2, 13)` (valores 2 a 12, igual que la base, que descartaba 1 y 13). `oldCard` se genera en el reparto (que cobra la apuesta) y `newCard` en la jugada.
+- Carta: `rng(2, 13)` (valores 2 a 12; J = 11 y Q = 12 en pantalla). `oldCard` se genera en el reparto y `newCard` en la jugada.
 - `higher` gana si `new > old`. `lower` gana si `new < old`. El empate pierde.
-- `k` = cantidad de valores que ganan: `12 - old` para `higher` y `old - 2` para `lower`. Si `k = 0` (mayor con un 12 o menor con un 2) la predicción se rechaza con 400 y el navegador deshabilita ese botón.
-- Si gana: `net = floor(bet * 0.95 * 11 / k) - bet`. Si pierde: `net = -bet`. El pago es inversamente proporcional a la probabilidad de ganar (`k/11`), con una ventaja de la casa de 5%: entre menos cartas ganan, más paga.
-- Motivo del cambio: en la base el empate gana y el multiplicador está entre 1.15 y 1.92 para cualquier carta. Jugando bien, el valor esperado es positivo con todas las cartas (con 2 o 12 se gana siempre), así que hi-lo crearía fichas sin límite y decidiría el ranking semanal y sus premios.
+- `k` = cantidad de valores que ganan: `12 - old` para `higher` y `old - 2` para `lower`. Si `k = 0` la predicción se rechaza con 400 y el navegador deshabilita ese botón.
+- Pago si gana: `floor(bet × 0.95 × 11 / k)`. El reparto envía por opción el multiplicador (`0.95 × 11 / k`, 2 decimales), la probabilidad (`k/11`) y el pago exacto con esa apuesta, para mostrarlos antes de elegir.
+- Motivo del cambio respecto a la base: ahí el empate gana y el multiplicador está entre 1.15 y 1.92 para cualquier carta, así que jugando bien el valor esperado es positivo con todas las cartas y hi-lo crearía fichas sin límite.
 
 ### 5.2 Ruleta
 
-- Rueda europea de 37 casillas, misma tabla que la base, `index = rng(0, 37)`. El 0 es `Verde` y no tiene paridad ni docena.
-- Cada apuesta paga 1 a 1: `+amount` si acierta, `-amount` si no. Con el 0 gana solo la apuesta a `Verde` y pierden las demás. Es la regla de la base, sin cambios. `net` es la suma.
+- Rueda europea de 37 casillas, `index = rng(0, 37)`. El 0 es `Verde` y no tiene paridad ni docena.
+- Pagos netos por ficha: color rojo o negro 1, paridad 1, docena 2, verde 35. Con el 0 pierden color, paridad y docena. Cada apuesta tiene un retorno de 36/37, como en una ruleta europea. En la base todo pagaba 1 a 1, así que verde y docena eran apuestas con retorno de 0.05 y 0.65. Cada resultado trae su `change` y `net` es la suma.
+- Los tipos se validan contra un `Map`, así un `type` como `__proto__` o `toString` da 400 y no 500.
 
 ### 5.3 Minas
 
-Tablero 5×5 (índice `i = x*5 + y`), 5 minas. Es la versión en el servidor (Etapa 5) que reemplaza a `POST /games/mines`.
+Tablero 5×5 (índice `i = x*5 + y`), 5 minas, resuelto en el servidor (el navegador nunca conoce las minas antes de terminar).
 
-- **start**: `mines` = 5 índices distintos con `rng`. `TransactWriteItems`: Update users `SET balance = balance - :bet, lastPlayedAt = :now` con `balance >= :bet`, Put game-rounds `{game:"mines", weekId: <semana actual>, status:"ACTIVE", revealed:[], version:0, expiresAt: ahora+3600}`, y Update weekly-stats (semana actual) `ADD net :net, gamesPlayed :one SET #name = :name` con `:net = -bet`. La pérdida cuenta en el ranking desde que se apuesta, así abandonar una partida que va mal no mejora la posición.
-- **reveal(x, y)**: GetItem consistente de la partida. Si no existe o `expiresAt` ya pasó → 404 (el borrado por TTL puede tardar, por eso se revisa a mano). Si `userId` no coincide o `game` no es `mines` → 403. Si `status != ACTIVE` → 409 GAME_FINISHED. Si la casilla ya está destapada se responde el estado actual sin cambios.
-  - Si es mina: `TransactWriteItems`: Update partida `SET status="LOST", version = version + 1` con `version = :v AND status = ACTIVE`, Put activity (`net = -bet`, `BetStatus=false`). Weekly-stats no se toca porque la pérdida ya se sumó en `start`. Responde `{result:"mine", status:"LOST", mines:[...], newBalance}`.
-  - Si no es mina: se destapa solo esa casilla, igual que el clic de la base (`reveal` en `mine.js`, sin relleno ni número de minas vecinas). Responde `{result:"safe", cell:{x,y}, status}`.
-  - Si con eso quedan destapadas las 20 casillas seguras: `TransactWriteItems` con Update partida `SET status="WON", version = version + 1` con `version = :v AND status = ACTIVE` (así un segundo clic simultáneo sobre la última casilla falla y no cobra dos veces), Update users `ADD balance :tripleBet`, Put activity (`net = +2*bet`, `BetStatus=true`), Update weekly-stats de la semana guardada en la partida (`weekId`, no la actual) `ADD net :net` con `:net = 3*bet` (sobre el −bet de `start` deja +2×bet). Así el neto es +2×apuesta al ganar y −apuesta al perder, igual que la base. Responde `{result:"safe", cell:{x,y}, status:"WON", mines:[...], newBalance}`.
-  - Si no: Update partida `SET revealed = :nuevo, version = version + 1` con `version = :v AND status = ACTIVE`.
-  - Si falla la condición de versión (dos clics simultáneos) → 409 CONFLICT y el navegador repite el mismo destape. Como una casilla ya destapada responde el estado actual sin cambios, el reintento siempre es seguro.
-- Las banderas siguen siendo solo visuales en el navegador.
-- Una partida abandonada pierde la apuesta (ya se cobró y ya contó en el ranking) y desaparece por TTL. No genera entrada de historial. Limitación aceptada y documentada.
-- En hi-lo, la jugada también trata una ronda con `expiresAt` vencido como inexistente.
+- **Multiplicador** tras `k` casillas seguras: `0.95 × C(25,k) / C(20,k)` (1.18, 1.50, 1.91, 2.48, …), porque `C(20,k)/C(25,k)` es la probabilidad de sobrevivir `k` destapes. El pago se limita a 1 000 000 fichas.
+- **Vista de partida**: `{gameId, bet, boardSize, minesCount, revealed:[{x,y}], safeCount, multiplier, nextMultiplier, cashoutAmount, nextCashoutAmount, maxPayout, atCap}`.
+- **reveal(x, y)**: si la casilla ya está destapada responde el estado sin cambios (un reintento siempre es seguro). Si es mina, cierra la ronda con `LOST` y responde las minas. Si es la casilla segura número 20, cierra con `WON` y paga como un cobro. Si no, Update partida `SET revealed, version = version + 1` con `version = :v AND status = ACTIVE` y, si choca con otro destape simultáneo, 409 CONFLICT para que el navegador lo repita.
+- **cashout**: con al menos una casilla segura, cierra la ronda con `CASHED` y paga `cashoutAmount = floor(bet × 0.95 × C(25,k)/C(20,k))`, el mismo número que mostraba la pantalla.
+- Cada entrada del historial guarda un `detail` corto ("Cayó 16 · Rojo · Par · 13–24", "Q → 3 · elegiste Menor", "Cobraste tras 3 casillas seguras").
+- Las banderas son solo visuales en el navegador.
 
 ## 6. Lambdas
 
@@ -411,7 +411,7 @@ Dashboard `FrioMx`: las 5 métricas, CPU de EC2, `FrioMx/RechargesCompleted`, `B
 
 - Jest y `aws-sdk-client-mock` para simular DynamoDB, SQS, SNS, S3, Secrets Manager y CloudWatch. `supertest` sobre `src/app.js` para rutas.
 - Casos mínimos:
-  - gameEngine: hi-lo con empate (pierde), `k = 0` rechazado, valor esperado menor o igual a 0.95 para todo `k` de 1 a 10 y apuesta de 1 a 10 000 (el `floor` lo baja con apuestas chicas), cercano a 0.95 (±0.01) con apuesta de 10 000, y `net` nunca negativo al ganar, ruleta en 0 (gana solo Verde) y en cada tipo de apuesta, generación de minas sin repetidos, condición de victoria.
+  - gameEngine: hi-lo con empate (pierde), `k = 0` rechazado, pago determinista igual al anunciado y valor esperado ≤ 0.95 para todo `k` y apuesta (≥ 0.949 con apuesta de 10 000), multiplicadores visibles, ruleta en 0 (verde 35 a 1), retorno 36/37 por tipo de apuesta y tipos del prototipo rechazados, multiplicador de minas creciente y con tope, generación de minas sin repetidos. En la API: rondas activas que se retoman, ROUND_ACTIVE, cobro de minas, concurrencia (repartos, jugadas, ruletas y cambios de correo simultáneos sin doble cobro ni 500), contraseña actual e invalidación de tokens, y paginación sin páginas vacías.
   - hi-lo: ronda inexistente, ajena, vencida o ya jugada; reparto con saldo insuficiente; pago de apuesta más ganancia al ganar y nada al perder.
   - gameService: transacción con condición de saldo, mapeo de `ConditionalCheckFailed` a 409, reintento ante `TransactionConflict`.
   - walletService: paquete inválido, variantes A y B del contador, límite diario, idempotencia (recarga existente), fallo de SQS a 503, dos recargas simultáneas en el primer uso del día (las dos pasan), reintento de una recarga ya creada con el cupo agotado (debe dar 202, no 429), estado `FAILED` a los 5 minutos, `GET /wallet/recharges/:id` con un id v5 responde 200.
@@ -419,33 +419,23 @@ Dashboard `FrioMx`: las 5 métricas, CPU de EC2, `FrioMx/RechargesCompleted`, `B
   - Lambdas: recarga duplicada sin doble abono, fallo parcial en el lote, bono dos veces el mismo día, cierre de semana repetido, cierre con `weekId` de la semana en curso (rechazado), semana sin ganadores, `isoWeekId` en cambio de año.
 - Las pruebas no tocan AWS real.
 
-## 17. Cambios al frontend
+## 17. Frontend
 
-| Archivo | Cambio |
+Se reescribió sobre una capa compartida sin dependencias externas: no hay CDN (la CSP del servidor del frontend solo permite scripts del mismo origen) ni Tailwind.
+
+- `styles/app.css`: variables de color, barra superior con saldo, menú lateral en escritorio y barra inferior en celular, botones, campos, tarjetas, avisos y diálogos.
+- `scripts/app.js` (`window.FrioMx`): guardia de sesión por página (`data-auth="private|guest|public"`, con `location.replace` para que Atrás no regrese a una página privada), cliente de la API con mensajes en español y manejo de 401, avisos, diálogos, formato de fichas y fechas, y el control de apuesta (½, ×2, Máx, solo enteros de 1 a 10 000).
+- `frontend/server.js`: rutas de páginas, 404 propio, cabeceras de seguridad (CSP, `nosniff`, `X-Frame-Options`) y, solo en desarrollo, proxy de `/api` con `xfwd` para que el límite de intentos vea la IP real.
+- Todo dato del usuario se pinta con `textContent`.
+
+| Página | Comportamiento |
 |---|---|
-| `scripts/config.js` | `BASE_URL = "/api"`. Quitar las constantes de assets. Las constantes de pagos se quitan junto con el cambio de `balance.js`, porque hoy esa página las usa al cargar. Agregar `HILO_DEAL`, `WALLET_PACKAGES`, `WALLET_RECHARGES`, `MINES_START`, `MINES_REVEAL`, `LEADERBOARD_CURRENT`, `LEADERBOARD_LAST`, `LEADERBOARD_WEEKS`. |
-| `env-config.sh` | Se elimina. Las URLs ahora son relativas a `/api`. |
-| `hi-lo.js`, `roulette.js`, `mine.js`, `balance.js`, `profile.js`, `activity.js` | Quitar `?id=` y `userId` de las peticiones (en `profile.js` también el `id` del cuerpo del PUT). |
-| `hi-lo.html` | Agregar el botón "Repartir". El espacio de la carta muestra un reverso hasta que llega la carta del servidor. Renombrar "Mayor o igual" y "Menor o igual" a "Mayor" y "Menor", porque el empate ahora pierde. |
-| `rules.html` | Reescribir la explicación de hi-lo: apuesta, reparto, mayor o menor, el empate pierde, y el pago depende de la probabilidad de ganar. |
-| `hi-lo.js` | Quitar el mazo local. La ronda tiene dos estados, descritos debajo de esta tabla. |
-| `roulette.js`, `roulette.html` | Sin cambios en apuestas. La apuesta a Verde se conserva. |
-| `login.js`, `register.js` | Siguen guardando `data.user.id` en `localStorage`, que la API conserva, así `balance.js`, `profile.js` e `indexLoading.js` siguen viendo la sesión. `login.js` muestra el mensaje de 429 (tarea 5.6). |
-| `balance.js`, `balance.html` | Reemplazar depósito con Stripe y retiro por tres botones de paquete. Al elegir uno: genera un UUID v4 como `Idempotency-Key` (receta debajo de la tabla), hace POST, consulta el estado cada 2 s durante 30 s y luego cada 15 s hasta ver `COMPLETED` o `FAILED` (máximo 6 minutos), y actualiza saldo. Si el jugador sale de la página, al volver se consulta la última recarga guardada en `localStorage`. Reintenta con la misma clave si recibe 503. |
-| `mine.js` | Fase 2: quitar `userId` del cuerpo de `POST /games/mines`. Corregir dos defectos de la base: hoy cada clic en "Jugar" vuelve a agregar los listeners de las casillas, así que desde la segunda partida el resultado se reporta varias veces, y el tablero se crea una sola vez al cargar, así que las minas no cambian entre partidas. Los listeners se agregan una vez, el tablero se regenera en cada partida y una bandera evita reportar el resultado más de una vez. Etapa 5: quitar la generación local de minas, llamar `start` al apostar y `reveal` en cada clic, pintar la casilla que regresa el servidor y las minas al perder. |
-| `activity.js` | Cambiar "USD" por "fichas", leer el arreglo `items` y agregar un botón "ver más" que pide `?cursor=${encodeURIComponent(nextCursor)}`. |
-| `profile.js` | No mostrar contraseña (la API no la regresa). La foto llega como URL firmada. Validar 5 MB e imagen antes de subir. |
-| `register.js` | Mandar `age` como número, validar contraseña de al menos 8 caracteres y máximo 72 bytes y leer el mensaje de error de `error`. Mensaje de éxito: "Revisa tu correo para activar las notificaciones". |
-| Todas las páginas `.html` | Quitar `<script src="env.js">`, que generaba `env-config.sh`. |
-| `hi-lo.js`, `roulette.js`, `mine.js` | Validar en el navegador que la apuesta sea un entero de 1 a 10 000 (hoy se usa `parseFloat`). |
-| `server.js` | Solo en desarrollo: si existe `API_PROXY_TARGET` (por ejemplo `http://localhost:3000`), reenviar `/api/*` a esa dirección con `http-proxy-middleware` v3 en versión fija, declarado en `dependencies` y cargado con `require` solo dentro del `if`, así en EC2 no hace falta. Se monta como `app.use(createProxyMiddleware({ target, pathFilter: "/api" }))` para que conserve el prefijo `/api` (montado con `app.use("/api", ...)` lo quitaría y el backend respondería 404). En EC2 la variable no existe y nginx hace ese trabajo. |
-| `leaderboard.html`, `scripts/leaderboard.js`, ruta `/leaderboard` en `server.js` | Página nueva con ranking en curso, última semana cerrada y un selector de semanas cerradas (`/leaderboard/weeks`). Se agrega `goToLeaderboard()` en `indexLoading.js` y el botón en la barra de navegación de las páginas con sesión. |
-| Todas las páginas | Ante 401 en una ruta con candado, limpiar `localStorage` y mandar a `/logIn`. `/auth/login` y `/auth/register` quedan fuera de esa regla para que `login.js` pueda mostrar su mensaje de credenciales inválidas. |
-
-UUID de la recarga en `balance.js`: `crypto.randomUUID()` solo existe en HTTPS o `localhost`, y la app se sirve por HTTP. Por eso se generan 16 bytes con `crypto.getRandomValues`, se fijan la versión (byte 6: `(b & 0x0f) OR 0x40`) y la variante (byte 8: `(b & 0x3f) OR 0x80`), y se formatean en hexadecimal con guiones en formato 8-4-4-4-12 (`xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx`), que es lo que acepta la validación de UUID v4 del backend. Como el frontend no tiene corredor de pruebas, esto se verifica en el paso 7 de la prueba de humo del plan (recarga desde `http://<ip>`), y el backend tiene una prueba que rechaza claves sin guiones.
-
-Estados de la ronda en `hi-lo.js`:
-
-- **Sin ronda.** El campo de apuesta y "Repartir" están habilitados, mayor y menor deshabilitados. La validación de apuesta entera y saldo suficiente, que hoy está en los botones mayor y menor, pasa a "Repartir". Al repartir se llama `POST /games/hi-lo/deal`, se guarda `roundId` y se pintan `oldCard` y el `newBalance`, que ya trae la apuesta descontada.
-- **Con ronda.** La apuesta y "Repartir" están deshabilitados. Mayor y menor están habilitados, salvo el que tenga `k = 0` (§5.1). Cada botón manda `POST /games/hi-lo` con `{roundId, prediction}`, sin revisar saldo.
-- Al terminar la ronda, o al recibir 404 (vencida) o 409 GAME_FINISHED, se borra `roundId` y se vuelve a "sin ronda".
+| Inicio, login y registro | Página pública con los juegos y cómo funciona. Errores por campo y validación antes de llamar a la API. El registro entra directo al lobby. El login respeta `?next=`. |
+| Lobby | Saludo, saldo, los tres juegos con sus pagos, juegos próximos sin enlace y últimas 5 partidas. |
+| Ruleta | Rueda en `<canvas>` que se detiene en `winningIndex`. Fichas de 1 a 500 o personalizadas sobre varias casillas, con deshacer, limpiar y repetir. El resultado queda en pantalla con el número, el detalle de cada apuesta y el neto. |
+| Hi-lo | Apuesta y reparto; mayor y menor muestran multiplicador, pago aproximado y probabilidad; el resultado muestra las dos cartas. La ronda abierta se retoma al recargar (`/active`). |
+| Minas | Tablero de botones navegable con teclado, multiplicador actual y siguiente, botón Cobrar, modo bandera y cola de destapes que reintenta en 409 CONFLICT. La partida abierta se retoma al recargar. |
+| Historial | Juego, fecha, apuesta, resultado (GANADA, PERDIDA, IGUAL, EN CURSO) y neto con signo; "Ver más" con cursor y estado vacío. |
+| Perfil | Editar nombre; cambiar correo o contraseña pidiendo la actual (guarda el token nuevo). La foto queda deshabilitada hasta tener S3. |
+| Saldo | Paquetes de recarga deshabilitados hasta tener SQS y Lambda. |
+| Reglas y Acerca de | Públicas; con sesión muestran el menú de la app. |
