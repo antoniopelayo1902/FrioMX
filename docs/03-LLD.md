@@ -322,7 +322,7 @@ server {
 - El archivo de nginx va en `/etc/nginx/conf.d/friomx.conf`. El `user_data` quita el bloque `server` que trae por defecto `/etc/nginx/nginx.conf` de Amazon Linux 2023 para que no compita por el puerto 80, valida con `nginx -t` y habilita el servicio con `systemctl enable --now nginx` (en Amazon Linux 2023 instalarlo no lo arranca).
 - Express usa `app.set("trust proxy", 1)` para que el límite de intentos vea la IP real.
 - Un archivo de más de 6 MB lo rechaza nginx con 413 antes de llegar al backend. `profile.js` valida 5 MB antes de subir, así el jugador ve el mensaje propio en lugar del 413.
-- Los servicios escriben su salida en `/var/log/friomx/backend.log` y `frontend.log` (`StandardOutput=append:` en `systemd`), con rotación por `logrotate` usando `copytruncate`, porque `systemd` abre el archivo una sola vez y un renombrado dejaría al proceso escribiendo en el archivo viejo. La configuración del agente vive en el repositorio (`infra/cloudwatch-agent.json`) y, desde la tarea 6.2, `deploy-on-instance.sh` la aplica en cada despliegue con `amazon-cloudwatch-agent-ctl -a fetch-config -m ec2 -c file:<ruta> -s`. Así un cambio no depende del `user_data`. Los logs van a `/friomx/backend` y `/friomx/frontend` (14 días).
+- Los servicios escriben su salida en `/var/log/friomx/backend.log` y `frontend.log` (`StandardOutput=append:` en `systemd`), con rotación por `logrotate` usando `copytruncate`, porque `systemd` abre el archivo una sola vez y un renombrado dejaría al proceso escribiendo en el archivo viejo. La configuración del agente vive en el repositorio (`infra/cloudwatch-agent.json`) y, una vez que existe el monitoreo, `deploy-on-instance.sh` la aplica en cada despliegue con `amazon-cloudwatch-agent-ctl -a fetch-config -m ec2 -c file:<ruta> -s`. Así un cambio no depende del `user_data`. Los logs van a `/friomx/backend` y `/friomx/frontend` (14 días).
 
 ## 9. S3
 
@@ -382,11 +382,11 @@ Dashboard `FrioMx`: las 5 métricas, CPU de EC2, `FrioMx/RechargesCompleted`, `B
 
 ## 14. Despliegue de la aplicación (`scripts/deploy-on-instance.sh`)
 
-`scripts/deploy.sh` arma `releases/<sha>.tgz` con `backend/` y `frontend/` (cada uno con `npm ci --omit=dev`), `scripts/deploy-on-instance.sh` y, si existe (desde la tarea 6.2), `infra/cloudwatch-agent.json`. Lo sube a S3 junto con un `env` generado con las salidas de Terraform. Luego ejecuta `aws ssm send-command --document-name AWS-RunShellScript`, cuyos `commands` descargan el tgz con `aws s3 cp`, lo descomprimen en `/opt/friomx/releases/<sha>` y corren el `deploy-on-instance.sh` que viene dentro. El script en la instancia:
+`scripts/deploy.sh` arma `releases/<sha>.tgz` con `backend/` y `frontend/` (cada uno con `npm ci --omit=dev`), `scripts/deploy-on-instance.sh` y, si existe, `infra/cloudwatch-agent.json`. Lo sube a S3 junto con un `env` generado con las salidas de Terraform. Luego ejecuta `aws ssm send-command --document-name AWS-RunShellScript`, cuyos `commands` descargan el tgz con `aws s3 cp`, lo descomprimen en `/opt/friomx/releases/<sha>` y corren el `deploy-on-instance.sh` que viene dentro. El script en la instancia:
 
 1. Descarga el `env` de S3 (el tgz ya lo descomprimieron los `commands` del `send-command`).
 2. Copia el `env` a `/etc/friomx/backend.env` (permisos 600, dueño `friomx`).
-3. Desde la tarea 6.2, aplica la configuración del agente de CloudWatch con `amazon-cloudwatch-agent-ctl -a fetch-config -m ec2 -c file:<versión>/infra/cloudwatch-agent.json -s`.
+3. Si el paquete trae `infra/cloudwatch-agent.json`, aplica la configuración del agente de CloudWatch con `amazon-cloudwatch-agent-ctl -a fetch-config -m ec2 -c file:<versión>/infra/cloudwatch-agent.json -s`.
 4. Guarda el destino actual de `/opt/friomx/current` como previo y apunta el enlace a la versión nueva.
 5. `systemctl restart friomx-backend friomx-frontend`.
 6. Hasta 10 intentos de `curl -fs http://127.0.0.1/api/health` cada 3 s.
@@ -397,7 +397,7 @@ Dashboard `FrioMx`: las 5 métricas, CPU de EC2, `FrioMx/RechargesCompleted`, `B
 
 `ci.yml`, en `pull_request` hacia `main`:
 - Jobs en paralelo: `backend` (Node 22, `npm ci`, `npm test -- --coverage`), `lambdas` (igual) y `terraform` (`hashicorp/setup-terraform` con versión fija 1.11.x, `fmt -check`, `init -backend=false`, `validate`). El job `deploy` del CD también usa `hashicorp/setup-terraform` con la misma versión.
-- `backend/jest.config.js` define `collectCoverageFrom: ["src/**/*.js"]` y `lambdas/jest.config.js` define `["*/index.js", "shared/**/*.js", "!dist/**"]`. Los dos usan `coverageThreshold.global`, que arranca en 0 (al inicio casi todo el código importado no tiene pruebas y un umbral más alto bloquearía todos los PR), sube a 30 al cerrar la Etapa 3 (tarea 3.7) y a 70 en líneas, ramas, funciones y sentencias en la tarea 5.4.
+- `backend/jest.config.js` define `collectCoverageFrom: ["src/**/*.js"]` y `lambdas/jest.config.js` define `["*/index.js", "shared/**/*.js", "!dist/**"]`. Los dos usan `coverageThreshold.global`, que arranca en 0 (al inicio casi todo el código importado no tiene pruebas y un umbral más alto bloquearía todos los PR), sube a 30 cuando los tres flujos tienen pruebas y a 70 en líneas, ramas, funciones y sentencias antes de la entrega final.
 - Protección de `main`: pull request obligatorio, 1 aprobación, los 3 jobs en verde.
 
 `cd.yml`, en `push` a `main`:

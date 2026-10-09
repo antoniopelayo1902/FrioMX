@@ -6,7 +6,7 @@ Versión 1.0, 8 de octubre de 2026.
 
 ## 1. Propósito y alcance
 
-FrioMx es un casino social con fichas virtuales, sin dinero real. Los usuarios se registran, reciben fichas, juegan ruleta, hi-lo y minas, recargan fichas y compiten en un ranking semanal. Este documento fija qué debe hacer el sistema al final del semestre y con qué restricciones. El cómo está en el HLD (`02-HLD.md`) y el LLD (`03-LLD.md`). El orden de trabajo está en el plan de migración (`04-plan-migracion.md`).
+FrioMx es un casino social con fichas virtuales, sin dinero real. Los usuarios se registran, reciben fichas, juegan ruleta, hi-lo y minas, recargan fichas y compiten en un ranking semanal. Este documento fija qué debe hacer el sistema al final del semestre y con qué restricciones. El cómo está en el HLD (`02-HLD.md`) y el LLD (`03-LLD.md`).
 
 ## 2. Contexto y supuestos
 
@@ -107,7 +107,7 @@ El flujo 3 es el que aprovecha características propias de la nube que son difí
 | 3 flujos end-to-end, uno propio de la nube | Sección 6. Flujo 3 programado y flujo 2 asíncrono |
 | Repositorio con commits de los 3 | Trabajo por ramas y pull requests, cada quien en su área (sección 3) |
 | Frontend y backend en la nube | Ambos en EC2 detrás de nginx |
-| Demo (video de 10 min en Fase 2, 20 min en vivo en Fase 3) | Sección 11 y plan de migración, tareas 4.3 y 6.5 |
+| Demo (video de 10 min en Fase 2, 20 min en vivo en Fase 3) | Sección 11 |
 | Diagrama de arquitectura | HLD, sección 3 |
 | CI/CD con GitHub Actions y pruebas | RNF-08 y RNF-09 |
 | Monitoreo 5/2/1 | RNF-06, detalle en el LLD |
