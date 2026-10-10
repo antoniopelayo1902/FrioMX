@@ -39,18 +39,18 @@ Se proyecta una sola máquina, la de quien tiene la cuenta del lab compartido. C
 3. `bash scripts/smoke.sh`. Todos los pasos en PASS. Ojo: invoca de verdad `weekly-ranking`, que cierra y paga la semana anterior si no estaba cerrada, y deja una cuenta `smoke-…@friomx.test`; la demo usa otra semana sembrada (§3), así que no choca. Si uno falla, se arregla ahora, no en la demo.
 4. Calentar la DLQ: `bash scripts/monitoring-check.sh --demo-alarms`, esperar a que `friomx-recharge-dlq` pase a ALARM (hasta 15 min si la cola llevaba más de 6 h sin actividad, porque SQS deja de publicar sus métricas) y luego `bash scripts/monitoring-check.sh --reset`. Así en la demo la alarma reacciona en uno o dos minutos.
 5. `bash scripts/monitoring-check.sh`. Las 6 métricas propias aparecen y las 2 alarmas están en OK. Si alguna sigue en ALARM de una prueba anterior, `bash scripts/monitoring-check.sh --reset` y esperar a que regrese a OK.
-5. Confirmar en la bandeja de los tres que la suscripción a `friomx-ops-alerts` está confirmada (en la consola de SNS no debe decir `PendingConfirmation`) y revisar spam.
-6. Crear la cuenta de demo con un correo del equipo y confirmar su suscripción de `friomx-user-notifications`. Jugar 2 partidas para que el bono diario la tome.
-7. Sembrar la semana para el ranking y guardar el valor:
+6. Confirmar en la bandeja de los tres que la suscripción a `friomx-ops-alerts` está confirmada (en la consola de SNS no debe decir `PendingConfirmation`) y revisar spam.
+7. Crear la cuenta de demo con un correo del equipo y confirmar su suscripción de `friomx-user-notifications`. Jugar 2 partidas para que el bono diario la tome.
+8. Sembrar la semana para el ranking y guardar el valor:
    ```
    WEEK=$(date -v-21d +%G-W%V)        # macOS
    (cd backend && npm ci)
    node scripts/seed.js --week "$WEEK" --include-email <correo de la cuenta de demo>
    ```
    Si `seed.js` dice que la semana está cerrada, usar `-v-28d`.
-8. Preparar el PR de la demo (§4) en una rama, sin abrirlo todavía.
-9. Dejar escritos en la terminal los comandos de los minutos 9 y 13 a 15.
-10. Comprobar que la sesión del lab tiene al menos 2 horas restantes.
+9. Preparar el PR de la demo (§4) en una rama, sin abrirlo todavía.
+10. Dejar escritos en la terminal los comandos de los minutos 9 y 13 a 15.
+11. Comprobar que la sesión del lab tiene al menos 2 horas restantes.
 
 ## 4. CI/CD en vivo
 

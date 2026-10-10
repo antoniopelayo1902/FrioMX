@@ -70,6 +70,7 @@ empty_bucket() {
     count="$(node -e 'const o=JSON.parse(process.argv[1]);process.stdout.write(String((o.Objects||[]).length))' "${batch}")"
     ((count > 0)) || break
     batch="$(node -e 'const o=JSON.parse(process.argv[1]);process.stdout.write(JSON.stringify({Objects:o.Objects,Quiet:true}))' "${batch}")"
+    # shellcheck disable=SC2016  # las comillas invertidas son JMESPath, no shell
     errors="$(aws s3api delete-objects --bucket "${bucket}" --region "${region}" --delete "${batch}" \
       --query 'length(Errors || `[]`)' --output text)"
     # Con Quiet la API responde 200 aunque fallen llaves; sin este corte el ciclo no terminaría.
