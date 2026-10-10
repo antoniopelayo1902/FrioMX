@@ -263,7 +263,7 @@ Tablero 5×5 (índice `i = x*5 + y`), 5 minas, resuelto en el servidor (el naveg
 - **Vista de partida**: `{gameId, bet, boardSize, minesCount, revealed:[{x,y}], safeCount, multiplier, nextMultiplier, cashoutAmount, nextCashoutAmount, maxPayout, atCap}`.
 - **reveal(x, y)**: si la casilla ya está destapada responde el estado sin cambios (un reintento siempre es seguro). Si es mina, cierra la ronda con `LOST` y responde las minas. Si es la casilla segura número 20, cierra con `WON` y paga como un cobro. Si no, Update partida `SET revealed, version = version + 1` con `version = :v AND status = ACTIVE` y, si choca con otro destape simultáneo, 409 CONFLICT para que el navegador lo repita.
 - **cashout**: con al menos una casilla segura, cierra la ronda con `CASHED` y paga `cashoutAmount = floor(bet × 0.95 × C(25,k)/C(20,k))`, el mismo número que mostraba la pantalla.
-- Cada entrada del historial guarda un `detail` corto ("Cayó 16 · Rojo · Par · 13–24", "Q → 3 · elegiste Menor", "Cobraste tras 3 casillas seguras").
+- Cada entrada del historial guarda un `detail` corto ("Cayó 16 · Rojo · Par · 13–24 · apostaste Rojo 10, Par 5", "Q → 3 · elegiste Menor", "Cobraste tras 3 casillas seguras").
 - Las banderas son solo visuales en el navegador.
 
 ## 6. Lambdas
