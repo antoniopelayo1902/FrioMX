@@ -58,9 +58,6 @@ curso (ver [Notas](#notas)).
   `bash scripts/monitoring-check.sh` y `--demo-alarms` (ver
   [Operación del lab](#operación-del-lab)); falta dejar registro de una corrida
   con los correos de alarma recibidos.
-- Protección de `main` en GitHub (pull request obligatorio, 1 aprobación y los
-  3 jobs del CI en verde): se configura en Settings → Branches y no se puede
-  verificar desde el repo.
 - Fuera de alcance: HTTPS, porque el lab no ofrece dominio ni certificado.
 - Para el reporte en PDF: el diagrama de arquitectura (`docs/02-HLD.md`,
   sección 3) está en mermaid. Hay que exportarlo a imagen, por ejemplo
@@ -424,11 +421,12 @@ que ya existen en CloudWatch (`GamesPlayed`, `ApiLatency`, `Api5xx`,
 dato: sin tráfico no se ve, y por eso conviene correr antes `smoke.sh`.
 
 - `--demo-alarms` dispara las dos alarmas de forma real y segura: manda un
-  mensaje de prueba directo a la DLQ de recargas y provoca respuestas 5xx de la
-  API (el script imprime el método que usa). Los correos llegan a
-  `alert_emails` si confirmaron la suscripción (paso 4). `friomx-recharge-dlq`
-  cambia en uno o dos minutos; `friomx-api-5xx` puede tardar hasta unos 6,
-  porque el backend manda métricas cada 60 s y la alarma suma 5 minutos.
+  mensaje de prueba directo a la DLQ de recargas y publica `Api5xx=5` en el
+  namespace `FrioMx` con `put-metric-data`, la misma métrica que emite el
+  backend. No genera errores reales en la API ni toca datos de jugadores. Los
+  correos llegan a `alert_emails` si confirmaron la suscripción (paso 4).
+  `friomx-recharge-dlq` cambia en uno o dos minutos y `friomx-api-5xx` en uno
+  a cinco (periodo de 5 minutos).
 - `--reset` regresa todo a normal: purga la DLQ. Las alarmas vuelven a `OK`
   solas cuando la métrica baja del umbral.
 
@@ -467,8 +465,9 @@ npm test
 Las dos suites generan reporte de cobertura en `coverage/` y exigen 70% en
 líneas, ramas, funciones y sentencias (`coverageThreshold` en
 `backend/jest.config.js` y `lambdas/jest.config.js`, RNF-09). El CI las corre
-en cada pull request a `main`, con DynamoDB Local como servicio del job
-`backend`, junto con `terraform fmt -check` y `terraform validate`.
+en cada pull request a `main` en 4 jobs: `backend` (con DynamoDB Local como
+servicio), `lambdas`, `e2e` (Playwright contra la app completa levantada en el
+runner) y `terraform` (`fmt -check` y `validate`).
 
 Pruebas de punta a punta del frontend, con Playwright, contra la app levantada
 en local (DynamoDB Local, backend y frontend, ver

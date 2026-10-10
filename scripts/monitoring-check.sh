@@ -97,11 +97,15 @@ done
 
 # --- Alarmas ---
 echo "--- Alarmas ---"
-aws cloudwatch describe-alarms --alarm-names "${ALARMS[@]}" \
-  --query 'MetricAlarms[].[AlarmName, StateValue, StateUpdatedTimestamp, StateReason]' --output text \
-  | while IFS=$'\t' read -r name state since reason; do
-    printf '%-22s %-17s desde %s\n    %s\n' "${name}" "${state}" "${since}" "${reason}"
-  done
+alarms_txt="$(aws cloudwatch describe-alarms --alarm-names "${ALARMS[@]}" \
+  --query 'MetricAlarms[].[AlarmName, StateValue, StateUpdatedTimestamp, StateReason]' --output text)"
+found=0
+while IFS=$'\t' read -r name state since reason; do
+  [[ -n "${name}" ]] || continue
+  found=$((found + 1))
+  printf '%-22s %-17s desde %s\n    %s\n' "${name}" "${state}" "${since}" "${reason}"
+done <<<"${alarms_txt}"
+alarms_missing=$(( ${#ALARMS[@]} - found ))
 dlq_depth="$(aws sqs get-queue-attributes --queue-url "${DLQ_URL}" \
   --attribute-names ApproximateNumberOfMessages --query Attributes.ApproximateNumberOfMessages --output text)"
 echo "Mensajes en la DLQ ahora: ${dlq_depth}"
@@ -109,3 +113,7 @@ echo "Mensajes en la DLQ ahora: ${dlq_depth}"
 echo "--- Dashboard ---"
 echo "${DASHBOARD_URL}"
 ((missing == 0)) || log "${missing} métrica(s) sin datos todavía (normal recién desplegado; corre scripts/smoke.sh para generarlas)"
+if ((alarms_missing > 0)); then
+  log "Faltan ${alarms_missing} alarma(s) de ${#ALARMS[@]}: corre scripts/deploy.sh"
+  exit 1
+fi

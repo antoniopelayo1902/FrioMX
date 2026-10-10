@@ -44,7 +44,7 @@ El lab no permite crear roles IAM, así que todo usa `LabRole` y `LabInstancePro
 
 ## 5. CI/CD y monitoreo
 
-**CI** (`.github/workflows/ci.yml`), en cada pull request a `main`, con tres jobs en paralelo: pruebas del backend con DynamoDB Local como servicio, pruebas de las Lambdas con AWS simulado, y `terraform fmt -check` y `validate`. Las dos suites exigen 70% de cobertura en líneas, ramas, funciones y sentencias; si baja, el job falla. El frontend tiene además pruebas de punta a punta con Playwright.
+**CI** (`.github/workflows/ci.yml`), en cada pull request a `main`, con cuatro jobs en paralelo: pruebas del backend con DynamoDB Local como servicio, pruebas de las Lambdas con AWS simulado, pruebas de punta a punta del frontend con Playwright contra la app completa levantada en el runner, y `terraform fmt -check` y `validate`. Las suites de backend y Lambdas exigen 70% de cobertura en líneas, ramas, funciones y sentencias; si baja, el job falla. `main` está protegida: todo entra por pull request y requiere la aprobación del dueño del código.
 
 **CD** (`.github/workflows/cd.yml`), en cada merge a `main`: repite el CI y corre `scripts/deploy.sh`, el mismo que se usa a mano. El script arma las Lambdas, aplica Terraform, empaqueta backend y frontend, los sube a S3 y ordena a la instancia por SSM Run Command instalar la versión nueva. La instancia prueba `/api/health` y `/login`; si fallan, regresa a la versión anterior y el pipeline queda en rojo. No hay SSH. Las credenciales del lab viven como secretos de GitHub y se renuevan en cada sesión.
 
@@ -77,6 +77,6 @@ Jugador → IP elástica → nginx en EC2 → frontend o API. La API usa DynamoD
 
 | Integrante | Rol |
 |---|---|
-| Antonio Pelayo | [completar] |
-| Emilio Bracamontes | [completar] |
-| Alan | [completar] |
+| Emilio Bracamontes | Backend flujo 1 + Frontend |
+| Antonio Pelayo | Backend flujo 2 + CI/CD |
+| Alan | Backend flujo 3 + Monitoreo |

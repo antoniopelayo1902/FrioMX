@@ -55,7 +55,8 @@ if [[ "${ASSUME_YES}" == false ]]; then
   [[ "${answer}" == "destruir" ]] || die "cancelado"
 fi
 
-# Borra todas las versiones y marcas de borrado de un bucket, en lotes de 1000.
+# Borra todas las versiones y marcas de borrado de un bucket. --no-paginate trae una sola página
+# de la API (máximo 1000 llaves entre versiones y marcas), el límite de delete-objects.
 empty_bucket() {
   local bucket="$1" region="$2" batch count
   if ! aws s3api head-bucket --bucket "${bucket}" --region "${region}" >/dev/null 2>&1; then
@@ -64,7 +65,7 @@ empty_bucket() {
   fi
   log "Vaciando s3://${bucket} (todas las versiones)"
   while :; do
-    batch="$(aws s3api list-object-versions --bucket "${bucket}" --region "${region}" --max-items 1000 \
+    batch="$(aws s3api list-object-versions --bucket "${bucket}" --region "${region}" --no-paginate \
       --query '{Objects: [Versions, DeleteMarkers][][].{Key: Key, VersionId: VersionId}}' --output json)"
     count="$(node -e 'const o=JSON.parse(process.argv[1]);process.stdout.write(String((o.Objects||[]).length))' "${batch}")"
     ((count > 0)) || break

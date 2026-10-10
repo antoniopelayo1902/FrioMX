@@ -156,5 +156,5 @@ Se trabaja en ramas `feature/*` con pull request a `main` y al menos una revisi�
 | Un jugador no confirma el correo de SNS | El resultado del flujo 2 también es visible en la aplicación (estado y saldo). |
 | Concurrencia de Lambda limitada en el lab | Concurrencia máxima de 2 en el consumidor de la cola. Las Lambdas programadas corren una vez. |
 | Una sola instancia es punto único de falla | Aceptado para el alcance escolar. Recuperación con `terraform apply` y despliegue desde el pipeline. |
-| Plazo corto a Fase 2 | Plan por prioridades. Minas del lado del servidor, ranking, CD, monitoreo (dashboard y 2 alarmas en Terraform) y cobertura de 70% ya están hechos. Queda activar la protección de `main` con los checks del CI (o confirmar que ya está activa). |
+| Plazo corto a Fase 2 | Plan por prioridades. Minas del lado del servidor, ranking, CD, monitoreo (dashboard y 2 alarmas en Terraform) y cobertura de 70% ya están hechos. |
 | Algo falla durante la demo en vivo | Revisión una hora antes con `resume-lab.sh`, `smoke.sh` y `monitoring-check.sh`, y un plan B por pieza en `04-presentacion.md`. |

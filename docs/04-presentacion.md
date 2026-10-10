@@ -25,7 +25,7 @@ Se proyecta una sola máquina, la de quien tiene la cuenta del lab compartido. C
 | 7-8 | Antonio | Terminal y GitHub | Abre el PR chico de la demo (§4) y deja corriendo el CI. Explica qué hace el CI mientras corre. |
 | 8-10 | Antonio | App: Saldo | Recarga de 500. "Procesando tu recarga…" y luego "Listo". La API responde 202 y encola; la Lambda `friomx-recharge-worker` acredita. Correo "FrioMx: recarga lista". Mencionar límite de 3 por día e idempotencia (doble clic no acredita dos veces). |
 | 10-11 | Antonio | Consola SQS y Lambda | Cola `friomx-recharges` con DLQ tras 3 intentos, concurrencia máxima 2. Logs de la invocación en CloudWatch. |
-| 11-13 | Antonio | GitHub Actions | CI en verde (backend con DynamoDB Local, Lambdas, Terraform). Merge del PR. Arranca el CD: pruebas, `terraform apply`, paquete a S3, despliegue por SSM sin SSH, prueba de salud y regreso automático a la versión previa si falla. Se deja corriendo. Cede a Alan. |
+| 11-13 | Antonio | GitHub Actions | CI en verde (4 jobs: backend con DynamoDB Local, Lambdas, e2e con Playwright y Terraform). Merge del PR. Arranca el CD: pruebas, `terraform apply`, paquete a S3, despliegue por SSM sin SSH, prueba de salud y regreso automático a la versión previa si falla. Se deja corriendo. Cede a Alan. |
 | 13-15 | Alan | App: Ranking y terminal | Ranking de la semana en curso con la fila propia. Invoca `friomx-daily-bonus` (bono de 100 a quien jugó en 7 días) y `friomx-weekly-ranking` con la semana sembrada (§3). Muestra `"status":"CLOSED"`, el top 3 en "Semanas cerradas" y el correo del premio. |
 | 15-16 | Alan | Consola EventBridge | Reglas `cron(0 14 * * ? *)` y `cron(10 7 ? * MON *)`: 08:00 y lunes 01:10 en Ciudad de México. Sin servidor encendido esperando. Un cierre repetido no paga dos veces. |
 | 16-18 | Alan | Dashboard `FrioMx` y alarmas | Las 5 métricas y las de apoyo. Alarmas `friomx-recharge-dlq` y `friomx-api-5xx` en ALARM (disparadas en el minuto 9, §5) y el correo en la bandeja del equipo. |
@@ -36,7 +36,7 @@ Se proyecta una sola máquina, la de quien tiene la cuenta del lab compartido. C
 
 1. Start Lab en AWS Academy y pegar las credenciales en `~/.aws/credentials`.
 2. `bash scripts/resume-lab.sh --gh-repo antoniopelayo1902/FrioMX`. Debe terminar con la URL y `/api/health` en OK. Esto también renueva los secretos del CD.
-3. `bash scripts/smoke.sh`. Todos los pasos en PASS. Si uno falla, se arregla ahora, no en la demo.
+3. `bash scripts/smoke.sh`. Todos los pasos en PASS. Ojo: invoca de verdad `weekly-ranking`, que cierra y paga la semana anterior si no estaba cerrada, y deja una cuenta `smoke-…@friomx.test`; la demo usa otra semana sembrada (§3), así que no choca. Si uno falla, se arregla ahora, no en la demo.
 4. `bash scripts/monitoring-check.sh`. Las 6 métricas propias aparecen y las 2 alarmas están en OK. Si alguna sigue en ALARM de una prueba anterior, `bash scripts/monitoring-check.sh --reset` y esperar a que regrese a OK.
 5. Confirmar en la bandeja de los tres que la suscripción a `friomx-ops-alerts` está confirmada (en la consola de SNS no debe decir `PendingConfirmation`) y revisar spam.
 6. Crear la cuenta de demo con un correo del equipo y confirmar su suscripción de `friomx-user-notifications`. Jugar 2 partidas para que el bono diario la tome.
@@ -67,13 +67,13 @@ En el minuto 7 se abre el PR. El CI tarda unos minutos; mientras, Antonio muestr
 
 ## 5. Alarmas en vivo
 
-En el minuto 9, Alan corre en su máquina, sin proyectar:
+En el minuto 9, Antonio corre en una terminal aparte de su máquina (la que tiene las credenciales del lab y `infra/envs/lab/backend.hcl`), sin proyectar:
 
 ```
 bash scripts/monitoring-check.sh --demo-alarms
 ```
 
-Manda un mensaje de prueba directo a la DLQ y provoca respuestas 5xx (el script imprime el método). `friomx-recharge-dlq` pasa a ALARM en uno o dos minutos. `friomx-api-5xx` tarda más, hasta unos 6, porque el backend envía métricas cada 60 s y la alarma suma 5 minutos; por eso se dispara en el minuto 9 y se muestra en el 16. Al terminar la presentación:
+Manda un mensaje de prueba directo a la DLQ y publica `Api5xx=5` con `put-metric-data`, la misma métrica que emite el backend; no se generan errores reales en la API. Si el profesor pregunta, se dice así: es una prueba controlada del umbral. `friomx-recharge-dlq` pasa a ALARM en uno o dos minutos y `friomx-api-5xx` en uno a cinco (periodo de 5 minutos); por eso se dispara en el minuto 9 y se muestra en el 16. Al terminar la presentación:
 
 ```
 bash scripts/monitoring-check.sh --reset
@@ -92,7 +92,7 @@ bash scripts/monitoring-check.sh --reset
 | CD no termina a tiempo | Duración normal de `terraform apply` y SSM | Mostrar en qué paso va. Se revisa al final de preguntas. |
 | `weekly-ranking` responde ya cerrada | Semana usada antes | Sembrar otra semana (`-v-28d`) e invocar de nuevo. "El cierre es único por semana: es la idempotencia del RF-19." |
 | Bono con `granted: 0` | La cuenta ya lo recibió hoy o no jugó en 7 días | Mostrar `skipped` en la respuesta. "Máximo un bono por día por jugador." |
-| Alarma no cambia a tiempo | Retraso de métricas (60 s del backend más el periodo de 5 min) | Mostrar el mensaje en la DLQ y la gráfica subiendo. Explicar periodo y umbral de cada alarma. |
+| Alarma no cambia a tiempo | Periodo de evaluación (1 min en la DLQ, 5 min en 5xx) y la demora de CloudWatch en procesar el dato | Mostrar el mensaje en la DLQ y la gráfica subiendo. Explicar periodo y umbral de cada alarma. |
 | Métrica propia no aparece | Sin tráfico desde que se levantó | Correr `bash scripts/smoke.sh` y esperar un minuto. "CloudWatch crea la métrica con su primer dato." |
 | Se vence la sesión del lab | Duración de unas 4 horas | Start Lab, pegar credenciales, `resume-lab.sh`. Por eso se revisa el tiempo restante una hora antes. |
 

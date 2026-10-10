@@ -206,8 +206,10 @@ invoke() {
   local meta
   meta="$(aws lambda invoke --region "${REGION}" --function-name "$1" \
     --cli-binary-format raw-in-base64-out --payload '{}' \
-    --query '{status: StatusCode, error: FunctionError}' --output json "${OUT_DIR}/$1.json" 2>&1)" \
-    || { echo "aws lambda invoke falló: ${meta}"; return 1; }
+    --query '{status: StatusCode, error: FunctionError}' --output json "${OUT_DIR}/$1.json" 2>"${OUT_DIR}/$1.err")" \
+    || { echo "aws lambda invoke falló: $(head -c 300 "${OUT_DIR}/$1.err")"; return 1; }
+  # Si la respuesta no es JSON no se puede saber si la Lambda falló: se cuenta como falla.
+  node -e 'JSON.parse(process.argv[1])' "${meta}" 2>/dev/null || { echo "respuesta ilegible de aws lambda invoke: ${meta}"; return 1; }
   if [[ -n "$(jx "${meta}" r.error)" ]]; then
     echo "FunctionError $(jx "${meta}" r.error): $(head -c 300 "${OUT_DIR}/$1.json")"
     return 1
