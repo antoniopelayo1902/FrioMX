@@ -415,11 +415,8 @@
         }
         function changed() { const v = validate(); if (onChange) onChange(v); }
         function set(v) { input.value = String(Math.max(1, Math.floor(v))); changed(); }
-        input.addEventListener('input', () => {
-            const clean = input.value.replace(/\D/g, '');
-            if (clean !== input.value) input.value = clean;
-            changed();
-        });
+        // No se limpia el texto: "1.5" o "-5" deben dar error, no convertirse en 15 o 5 sin avisar.
+        input.addEventListener('input', changed);
         input.addEventListener('keydown', (e) => { if (e.key === 'Enter' && onEnter) { e.preventDefault(); onEnter(); } });
         half.addEventListener('click', () => set((read() || 2) / 2));
         dbl.addEventListener('click', () => set(Math.min(limit() || 1, (read() || 1) * 2)));

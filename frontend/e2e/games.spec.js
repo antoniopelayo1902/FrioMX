@@ -51,6 +51,14 @@ test('ruleta: valor de ficha inválido no pone fichas', async ({ page }) => {
     await expect(page.locator('#rl-chips .error')).toContainText('mínima');
     await page.locator('[data-key="color:Negro"]').click();
     await expect(page.locator('#rl-total')).toHaveText('0');
+    // Decimales, comas y negativos no se convierten en otro número: dan error.
+    for (const bad of ['1.5', '2,5', '-5']) {
+        await page.locator('#rl-chips input').fill(bad);
+        await expect(page.locator('#rl-chips input')).toHaveValue(bad);
+        await expect(page.locator('#rl-chips .error')).toContainText('enteros');
+        await page.locator('[data-key="color:Negro"]').click();
+        await expect(page.locator('#rl-total')).toHaveText('0');
+    }
 });
 
 test('hi-lo: repartir, elegir y el saldo cuadra', async ({ page, request }) => {
