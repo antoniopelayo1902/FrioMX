@@ -131,7 +131,7 @@ Las 5 métricas son: partidas jugadas por juego, latencia p95 de la API, errores
 
 ## 9. CI/CD
 
-Se trabaja en ramas `feature/*` con pull request a `main` y al menos una revisión. El CI corre en cada pull request: instala dependencias, corre pruebas con un umbral de cobertura que empieza en 0 y sube por etapas hasta 70% antes de la sesión del 12 de noviembre, `terraform fmt` y `terraform validate`. Al hacer merge, el CD repite las pruebas, aplica Terraform, empaqueta backend y frontend, sube el paquete a S3 y ordena a la instancia por SSM descargarlo, cambiar de versión y reiniciar. Si la verificación de salud falla, la instancia regresa a la versión anterior. Las credenciales del lab viven como secretos de GitHub y se renuevan en cada sesión con un script. El CD (`.github/workflows/cd.yml`) y el despliegue a mano usan el mismo script, `scripts/deploy.sh`.
+Se trabaja en ramas `feature/*` con pull request a `main` y al menos una revisión. El CI corre en cada pull request: instala dependencias, corre pruebas con un umbral de cobertura de 70% (las pruebas de API del backend usan DynamoDB Local como servicio del job), `terraform fmt` y `terraform validate`. Al hacer merge, el CD repite las pruebas, aplica Terraform, empaqueta backend y frontend, sube el paquete a S3 y ordena a la instancia por SSM descargarlo, cambiar de versión y reiniciar. Si la verificación de salud falla, la instancia regresa a la versión anterior. Las credenciales del lab viven como secretos de GitHub y se renuevan en cada sesión con un script. El CD (`.github/workflows/cd.yml`) y el despliegue a mano usan el mismo script, `scripts/deploy.sh`.
 
 ## 10. Decisiones técnicas
 
@@ -156,4 +156,5 @@ Se trabaja en ramas `feature/*` con pull request a `main` y al menos una revisi�
 | Un jugador no confirma el correo de SNS | El resultado del flujo 2 también es visible en la aplicación (estado y saldo). |
 | Concurrencia de Lambda limitada en el lab | Concurrencia máxima de 2 en el consumidor de la cola. Las Lambdas programadas corren una vez. |
 | Una sola instancia es punto único de falla | Aceptado para el alcance escolar. Recuperación con `terraform apply` y despliegue desde el pipeline. |
-| Plazo corto a Fase 2 | Plan por prioridades. Minas del lado del servidor, ranking, CD y monitoreo (dashboard y 2 alarmas en Terraform) ya están hechos. Falta subir la cobertura a 70%, verificar el monitoreo en la nube y activar la protección de `main` con los checks del CI (o confirmar que ya está activa). |
+| Plazo corto a Fase 2 | Plan por prioridades. Minas del lado del servidor, ranking, CD, monitoreo (dashboard y 2 alarmas en Terraform) y cobertura de 70% ya están hechos. Queda activar la protección de `main` con los checks del CI (o confirmar que ya está activa). |
+| Algo falla durante la demo en vivo | Revisión una hora antes con `resume-lab.sh`, `smoke.sh` y `monitoring-check.sh`, y un plan B por pieza en `04-presentacion.md`. |

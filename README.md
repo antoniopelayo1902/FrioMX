@@ -33,7 +33,7 @@ EC2, DynamoDB, Lambda, SQS, SNS, EventBridge, S3, Secrets Manager, CloudWatch.
 
 ## Estado
 
-Fase 2. Los tres flujos corren en AWS Learner Lab y se despliegan con un solo
+Fase 3. Los tres flujos corren en AWS Learner Lab y se despliegan con un solo
 script (`scripts/deploy.sh`) o con el CD al hacer merge a `main`:
 
 - Juegos (ruleta, hi-lo y minas) con historial, en EC2 con DynamoDB.
@@ -42,19 +42,22 @@ script (`scripts/deploy.sh`) o con el CD al hacer merge a `main`:
   `friomx-daily-bonus` y `friomx-weekly-ranking`, página de Ranking.
 - Foto de perfil en S3 con URL firmada.
 - Monitoreo: 5 métricas, 2 alarmas con correo al equipo y dashboard `FrioMx`.
+- Pruebas: 70% de cobertura mínima en backend y Lambdas, y pruebas de punta a
+  punta del frontend con Playwright.
+- Scripts de operación del lab: arranque, prueba de humo, revisión del
+  monitoreo y destrucción.
 
 En local corren juegos, historial, perfil sin foto y ranking de la semana en
 curso (ver [Notas](#notas)).
 
 ## Pendiente
 
-- Cobertura de pruebas: el umbral de `backend/jest.config.js` y
-  `lambdas/jest.config.js` está en 0; RNF-09 pide 70% en líneas, ramas,
-  funciones y sentencias antes del 12 de noviembre.
 - Verificación del monitoreo en la nube: el dashboard `FrioMx` y las 2 alarmas
-  (`friomx-api-5xx` y `friomx-recharge-dlq`) ya están en Terraform (módulo
-  `monitoring`); falta comprobar con tráfico real que las métricas llegan y que
-  las alarmas avisan por correo.
+  (`friomx-api-5xx` y `friomx-recharge-dlq`) están en Terraform (módulo
+  `monitoring`). Se comprueban en cada sesión con
+  `bash scripts/monitoring-check.sh` y `--demo-alarms` (ver
+  [Operación del lab](#operación-del-lab)); falta dejar registro de una corrida
+  con los correos de alarma recibidos.
 - Protección de `main` en GitHub (pull request obligatorio, 1 aprobación y los
   3 jobs del CI en verde): se configura en Settings → Branches y no se puede
   verificar desde el repo.
@@ -365,25 +368,77 @@ a encender y los servicios de la app arrancan solos.
   usas el CD) antes de correr `aws` o `deploy.sh`.
 - No hay que repetir el paso 2. Para desplegar cambios basta con
   `bash scripts/deploy.sh`.
+- `bash scripts/resume-lab.sh` hace la revisión de arranque de una vez (ver
+  [Operación del lab](#operación-del-lab)).
 
 ### 8. Destruir
 
 ```
-bash lambdas/build.sh
-terraform -chdir=infra/envs/lab init -backend-config=backend.hcl
-terraform -chdir=infra/envs/lab destroy -var-file=lab.tfvars
+bash scripts/destroy.sh
 ```
 
-`lambdas/build.sh` va primero porque Terraform necesita `lambdas/dist/` para
-leer el plan, aunque vaya a borrar todo. Escribe `yes` para confirmar. Se
-borran la instancia, la IP elástica, las 7 tablas con sus datos, las colas,
-los temas, las Lambdas, las alarmas, el secreto y los buckets de fotos y de
-artefactos con su contenido.
+Pide escribir `destruir` para confirmar. Vacía los buckets versionados de
+fotos y de artefactos, corre `terraform destroy` y al final borra también el
+bucket del estado `friomx-tfstate-<cuenta>`. Se borran la instancia, la IP
+elástica, las 7 tablas con sus datos, las colas, los temas, las Lambdas, las
+alarmas, el dashboard y el secreto.
 
-Queda el bucket del estado `friomx-tfstate-<cuenta>`, porque lo creó
-`bootstrap-state.sh` y no Terraform. Así se puede volver a desplegar con el
-paso 3 sin repetir el 2. Si quieres borrar también ese bucket, vacíalo desde la
-consola de S3 (tiene versionado) y elimínalo ahí.
+- `--yes` no pide confirmación (para usarlo sin terminal interactiva).
+- `--keep-state` conserva el bucket del estado. Así se puede volver a
+  desplegar con el paso 3 sin repetir el 2.
+
+## Operación del lab
+
+Cuatro scripts cubren una sesión de trabajo o de demo. Se corren desde la raíz
+del repo, con las credenciales del lab ya pegadas (paso 1 de
+[Desplegar](#desplegar-en-aws-learner-lab)).
+
+| Script | Para qué |
+|---|---|
+| `bash scripts/resume-lab.sh [--gh-repo OWNER/REPO]` | Al empezar una sesión nueva del lab |
+| `bash scripts/smoke.sh [--url http://IP]` | Probar los 3 flujos contra la nube |
+| `bash scripts/monitoring-check.sh [--demo-alarms] [--reset]` | Revisar métricas, alarmas y dashboard |
+| `bash scripts/destroy.sh [--yes] [--keep-state]` | Borrar todo (ver paso 8) |
+
+**`resume-lab.sh`.** Verifica que las credenciales funcionan, arranca la
+instancia si está detenida, espera a que aparezca en SSM y a que
+`/api/health` responda, e imprime la URL de la app. Con
+`--gh-repo OWNER/REPO` corre además `update-gh-secrets.sh` para que el CD
+tenga las credenciales de esta sesión.
+
+**`smoke.sh`.** Prueba de punta a punta de los tres flujos. Por defecto usa la
+IP de `terraform output -raw public_ip`; `--url http://IP` apunta a otra.
+Imprime PASS o FAIL por paso y termina con código distinto de 0 si algo falla.
+
+- Flujo 1: registro, login, una ruleta y el historial.
+- Flujo 2: recarga de 500, espera a que quede `COMPLETED` y revisa que el
+  saldo subió 500.
+- Flujo 3: invoca con `aws lambda invoke` el bono diario y el cierre de
+  ranking y revisa su efecto.
+
+**`monitoring-check.sh`.** Lista las métricas propias del namespace `FrioMx`
+que ya existen en CloudWatch (`GamesPlayed`, `ApiLatency`, `Api5xx`,
+`RechargesCompleted`, `RechargeFailed`, `BonusGranted`), muestra el estado de
+`friomx-api-5xx` y `friomx-recharge-dlq` e imprime la URL del dashboard
+`FrioMx`. Una métrica propia aparece en CloudWatch solo después de su primer
+dato: sin tráfico no se ve, y por eso conviene correr antes `smoke.sh`.
+
+- `--demo-alarms` dispara las dos alarmas de forma real y segura: manda un
+  mensaje de prueba directo a la DLQ de recargas y provoca respuestas 5xx de la
+  API (el script imprime el método que usa). Los correos llegan a
+  `alert_emails` si confirmaron la suscripción (paso 4). `friomx-recharge-dlq`
+  cambia en uno o dos minutos; `friomx-api-5xx` puede tardar hasta unos 6,
+  porque el backend manda métricas cada 60 s y la alarma suma 5 minutos.
+- `--reset` regresa todo a normal: purga la DLQ. Las alarmas vuelven a `OK`
+  solas cuando la métrica baja del umbral.
+
+Orden típico al iniciar una sesión:
+
+```
+bash scripts/resume-lab.sh --gh-repo antoniopelayo1902/FrioMX
+bash scripts/smoke.sh
+bash scripts/monitoring-check.sh
+```
 
 ## Pruebas
 
@@ -396,8 +451,10 @@ DDB_ENDPOINT=http://localhost:8000 npm test
 ```
 
 Sin `DDB_ENDPOINT` solo corren las pruebas unitarias (motor de juegos,
-utilidades, configuración y recargas con DynamoDB simulado); las de la API se
-saltan.
+utilidades, configuración y recargas con DynamoDB simulado) y las de la API se
+saltan. En ese caso la cobertura queda por debajo del 70% y `npm test` falla
+por el umbral, aunque ninguna prueba haya fallado. Para la corrida completa
+hace falta DynamoDB Local en el puerto 8000.
 
 Lambdas (no necesitan DynamoDB Local; AWS se simula con `aws-sdk-client-mock`):
 
@@ -407,10 +464,25 @@ npm ci
 npm test
 ```
 
-Las dos suites generan reporte de cobertura en `coverage/`. El CI las corre en
-cada pull request a `main`, junto con `terraform fmt -check` y
-`terraform validate`.
+Las dos suites generan reporte de cobertura en `coverage/` y exigen 70% en
+líneas, ramas, funciones y sentencias (`coverageThreshold` en
+`backend/jest.config.js` y `lambdas/jest.config.js`, RNF-09). El CI las corre
+en cada pull request a `main`, con DynamoDB Local como servicio del job
+`backend`, junto con `terraform fmt -check` y `terraform validate`.
+
+Pruebas de punta a punta del frontend, con Playwright, contra la app levantada
+en local (DynamoDB Local, backend y frontend, ver
+[Correr en local](#correr-en-local)):
+
+```
+cd frontend
+npm run e2e
+```
+
+Usan `BASE_URL`, por defecto http://localhost:8080.
 
 ## Documentación
 
-Requerimientos, HLD y LLD en `docs/`.
+En `docs/`: requerimientos (`01`), HLD (`02`), LLD (`03`), guion de la
+presentación final (`04-presentacion.md`) y borrador del reporte
+(`05-reporte.md`).

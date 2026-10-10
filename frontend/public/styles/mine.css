@@ -183,12 +183,24 @@
     .mn-head { margin-bottom: 8px; }
     .mn-head h1 { font-size: 1.4rem; }
     .mn-lead { display: none; }
+    /* Los contadores de la partida van arriba a la derecha, junto al tablero, y no debajo de él
+       (en horizontal quedaban fuera de la pantalla). */
     .mn-layout {
         --bs: min(460px, calc(100vh - var(--bottombar-h) - 28px));
-        grid-template-columns: auto minmax(250px, 1fr); justify-items: stretch; align-items: start;
+        grid-template-columns: var(--bs) minmax(250px, 1fr); grid-template-rows: auto 1fr;
+        grid-template-areas: "board under" "board panel";
+        justify-items: stretch; align-items: start; gap: 10px 16px;
     }
-    .mn-stage { width: var(--bs); }
-    .mn-panel { width: auto; padding: 14px; gap: 10px; }
+    .mn-stage { display: contents; }
+    .mn-board-wrap { grid-area: board; width: var(--bs); }
+    .mn-under { grid-area: under; padding: 8px 10px; }
+    .mn-live { gap: 6px; }
+    .mn-stat { padding: 2px 4px; }
+    .mn-stat .v { font-size: 1.1rem; }
+    .mn-stat .m { min-height: 0; }
+    .mn-outcome .result { min-height: 0; padding: 8px 12px; }
+    .mn-outcome .result strong { font-size: 1rem; }
+    .mn-panel { grid-area: panel; width: auto; padding: 14px; gap: 10px; }
     .mn-panel .gm-action { order: -1; }
     .mn-under, .mn-outcome .result { scroll-margin-bottom: calc(var(--bottombar-h) + 8px); }
     .mn-board-wrap { scroll-margin-top: 8px; }
@@ -198,7 +210,6 @@
         padding: 0; background: none; border: 0; box-shadow: none;
     }
     .gm-action .gm-main { width: 100%; }
-    .mn-panel { position: sticky; top: 8px; }
     .gm-edit, .gm-edit:not([hidden]) { display: none; }
 }
 

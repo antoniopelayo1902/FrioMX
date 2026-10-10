@@ -47,6 +47,59 @@ jobs:
       - run: npm ci
       - run: npm test -- --coverage
 
+  e2e:
+    runs-on: ubuntu-latest
+    # Pruebas en navegador real (Playwright) contra la app completa en local.
+    services:
+      dynamodb:
+        image: amazon/dynamodb-local:2.6.1
+        ports:
+          - 8000:8000
+    env:
+      DDB_ENDPOINT: http://localhost:8000
+      JWT_SECRET: secreto-solo-para-ci
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Instalar dependencias
+        run: |
+          npm ci --prefix backend
+          npm ci --prefix frontend
+      - name: Crear tablas en DynamoDB Local
+        working-directory: backend
+        run: node scripts/create-local-tables.js
+      - name: Levantar backend y frontend
+        run: |
+          (cd backend && nohup npm start > ../backend.log 2>&1 &)
+          (cd frontend && API_PROXY_TARGET=http://127.0.0.1:3000 nohup npm start > ../frontend.log 2>&1 &)
+          for i in $(seq 1 30); do
+            curl -sf http://127.0.0.1:3000/api/health && curl -sf -o /dev/null http://127.0.0.1:8080/ && exit 0
+            sleep 2
+          done
+          cat backend.log frontend.log
+          exit 1
+      - name: Instalar Chromium
+        working-directory: frontend
+        run: npx playwright install --with-deps chromium
+      - name: e2e
+        working-directory: frontend
+        env:
+          BASE_URL: http://127.0.0.1:8080
+        run: npm run e2e
+      - name: Guardar reporte si falla
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: |
+            frontend/playwright-report
+            frontend/test-results
+            backend.log
+            frontend.log
+          retention-days: 7
+
   terraform:
     runs-on: ubuntu-latest
     steps:

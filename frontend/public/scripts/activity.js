@@ -19,12 +19,27 @@
 
     const label = (item) => UI.game(item.nameGame).label;
 
+    // "Cayó 14 · Rojo · Par · 13–24 · apostaste Verde 100, Par 50": lo que cayó en una línea y lo
+    // apostado en otra, cada apuesta sin partirse a la mitad (en celular se cortaba "13–" / "24 25").
+    function detailOf(text) {
+        if (!text) return null;
+        const i = text.indexOf(' · apostaste ');
+        if (i < 0) return el('span', { class: 'detail', text });
+        const bets = text.slice(i + ' · apostaste '.length).split(', ');
+        // "13–24 25" se lee mejor como "13–24: 25".
+        const parts = (list, sep) => list.flatMap((t, k) => [k ? sep : null, el('span', { class: 'nw', text: t })]).filter(Boolean);
+        return el('span', { class: 'detail' },
+            el('span', { class: 'detail-line' }, ...parts(text.slice(0, i).split(' · '), ' · ')),
+            el('span', { class: 'detail-line detail-bets' }, 'Apostaste: ',
+                ...parts(bets.map((b) => b.replace(/ (\d[\d,]*)$/, ': $1')), ', ')));
+    }
+
     function row(item) {
         const g = UI.game(item.nameGame);
         return el('tr', {},
             el('td', { class: 'c-game' }, el('span', { class: 'game' }, UI.gameThumb(item.nameGame),
                 el('span', { class: 'game-text' }, el('span', { text: g.label }),
-                    item.detail ? el('span', { class: 'detail', text: item.detail }) : null))),
+                    detailOf(item.detail)))),
             el('td', { class: 'c-date', text: date(item.dateGame) }),
             el('td', { class: 'c-bet right num', text: chips(item.bet || 0) }),
             el('td', { class: 'c-res' }, el('span', { class: 'res' }, UI.resultBadge(item.result), UI.continueLink(item))),

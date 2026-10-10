@@ -36,7 +36,6 @@
     const DEBUG = (() => { try { return localStorage.getItem('friomxDebug') === '1'; } catch { return false; } })();
     const DEBUG_MAX_SPINS = 50;
     const HIST_MAX = 10;
-    const CHIP_VALUES = [1, 5, 10, 50, 100, 500];
 
     // ---------- Estado ----------
     const SS_LAST = 'friomx-roulette-last';
@@ -66,8 +65,7 @@
         try { localStorage.setItem(histKey, JSON.stringify(state.history.slice(0, HIST_MAX))); } catch { /* sin almacenamiento */ }
     }
     const state = {
-        chip: 10,
-        customChip: null,
+        chip: 10,              // valor de cada ficha (control de apuesta común)
         bets: {},               // key -> monto (la mesa; queda vacía después de cada giro)
         undo: [],               // instantáneas anteriores de bets
         lastBets: cleanBets(readSS(SS_LAST, null)),
@@ -84,19 +82,13 @@
     const maxWinEl = $('rl-maxwin');
     const cellButtons = {};
 
+    // Valor de la ficha: el mismo control de apuesta que Hi-Lo y Minas (½, ×2, Máx y fichas rápidas).
+    let chipCtl = null;
     function buildChips() {
-        const host = $('rl-chips');
-        CHIP_VALUES.forEach((v) => {
-            host.append(F.el('button', {
-                type: 'button', class: `rl-chip rl-chip-${v}`, 'data-chip': v,
-                'aria-pressed': 'false', 'aria-label': `Ficha de ${F.chips(v)}`,
-                onclick: () => selectChip(v),
-            }, F.el('span', { text: F.num(v) })));
+        chipCtl = F.betControl($('rl-chips'), {
+            initial: state.chip, label: 'Valor de la ficha',
+            onChange: (v) => { if (v !== null) state.chip = v; render(); },
         });
-        host.append(F.el('button', {
-            type: 'button', class: 'rl-chip rl-chip-custom', id: 'rl-chip-custom', 'data-chip': 'custom',
-            'aria-pressed': 'false', 'aria-label': 'Ficha de otro valor', onclick: askCustomChip,
-        }, F.el('span', { text: 'Otro' })));
     }
 
     function buildCells() {
@@ -115,52 +107,6 @@
         });
     }
 
-    // Mismo formato en la ficha y en la mesa ("5,000"); la ficha encoge la letra si el número es largo.
-    function setChipText(btn, v) {
-        const text = F.num(v);
-        btn.firstChild.textContent = text;
-        btn.dataset.len = String(Math.min(text.length, 6));
-    }
-
-    function selectChip(v) {
-        state.chip = v;
-        document.querySelectorAll('.rl-chip').forEach((b) => {
-            const on = b.dataset.chip === 'custom' ? (state.customChip !== null && v === state.customChip && !CHIP_VALUES.includes(v)) : Number(b.dataset.chip) === v;
-            b.setAttribute('aria-pressed', on ? 'true' : 'false');
-        });
-    }
-
-    // La ficha "Otro" llega como máximo a tu saldo (y nunca más de 10,000 por giro).
-    const customMax = () => Math.min(MAX_TOTAL, Math.max(0, Math.floor(F.getBalance() ?? 0)));
-    async function askCustomChip() {
-        const max = customMax();
-        if (max < 1) {
-            F.toast('No tienes fichas para crear una ficha nueva.', 'error');
-            return;
-        }
-        const raw = await F.dialog({
-            title: 'Ficha de otro valor', text: max === MAX_TOTAL
-                ? `Escribe un número entero de 1 a ${F.num(max)} (el máximo por giro).`
-                : `Escribe un número entero de 1 a ${F.num(max)} (tu saldo).`,
-            confirmText: 'Usar ficha', input: { type: 'text', label: 'Valor de la ficha', placeholder: 'Ej. 25' },
-        });
-        if (raw === null) return;
-        const typed = String(raw).trim().replace(/\s/g, '');
-        // Acepta "1500" y "1,500"; nada de decimales.
-        const clean = /^\d{1,3}(,\d{3})+$/.test(typed) ? typed.replace(/,/g, '') : typed;
-        const lim = customMax();
-        if (!/^\d+$/.test(clean) || Number(clean) < 1 || Number(clean) > lim) {
-            F.toast(`El valor de la ficha debe ser un número entero de 1 a ${F.num(lim)}.`, 'error');
-            return;
-        }
-        const v = Number(clean);
-        state.customChip = v;
-        const b = $('rl-chip-custom');
-        setChipText(b, v);
-        b.setAttribute('aria-label', `Ficha de otro valor: ${F.chips(v)}`);
-        selectChip(v);
-    }
-
     // ---------- Apuestas ----------
     const total = () => Object.values(state.bets).reduce((a, b) => a + b, 0);
     const snapshot = () => ({ ...state.bets });
@@ -168,8 +114,12 @@
 
     function addBet(key) {
         if (state.busy) return;
+        // Valor de ficha inválido (vacío, 0, más que tu saldo): el control ya muestra por qué.
+        const chip = chipCtl.value();
+        if (chip === null) { chipCtl.input.focus(); return; }
+        state.chip = chip;
         state.undo.push(snapshot());
-        state.bets[key] = (state.bets[key] || 0) + state.chip;
+        state.bets[key] = (state.bets[key] || 0) + chip;
         changed();
     }
     function undo() {
@@ -634,9 +584,8 @@
     // ---------- Arranque ----------
     let debug = null;
     function init() {
-        buildChips();
         buildCells();
-        selectChip(state.chip);
+        buildChips();
         renderHistory();
         showPanel('idle');
         let restored = false;

@@ -416,7 +416,7 @@ Dashboard `FrioMx`: las 5 métricas, CPU de EC2, `FrioMx/RechargesCompleted`, `B
 | functions | `archive_file` por Lambda, `aws_lambda_function` con `source_code_hash`, `aws_lambda_event_source_mapping`, `aws_cloudwatch_event_rule`/`target`, `aws_lambda_permission`, grupos de logs |
 | monitoring | alarmas y `aws_cloudwatch_dashboard` |
 
-- Salidas (`infra/envs/lab/outputs.tf`): `public_ip`, `instance_id`, `artifacts_bucket`, `uploads_bucket`, `recharge_queue_url`, `recharge_dlq_url`, `user_topic_arn`, `ops_topic_arn`, `jwt_secret_arn`, `aws_region`, `tables` (mapa `users`, `user_emails`, `activity`, `weekly_stats`, `recharges`, `game_rounds`, `leaderboard` → nombre) y `backend_env` (el contenido completo de `backend.env`, una línea `KEY=VALUE` por variable). `scripts/deploy.sh`, que también usa el CD, las lee una por una con `terraform output -raw <nombre>` y escribe `backend_env` tal cual.
+- Salidas (`infra/envs/lab/outputs.tf`): `public_ip`, `instance_id`, `artifacts_bucket`, `uploads_bucket`, `recharge_queue_url`, `recharge_dlq_url`, `user_topic_arn`, `ops_topic_arn`, `jwt_secret_arn`, `aws_region`, `tables` (mapa `users`, `user_emails`, `activity`, `weekly_stats`, `recharges`, `game_rounds`, `leaderboard` → nombre) y `backend_env` (el contenido completo de `backend.env`, una línea `KEY=VALUE` por variable). En Entrega 3 se agregan `dashboard_url` y `function_names` (mapa `recharge-worker`, `daily-bonus`, `weekly-ranking` → nombre), que usan los scripts de operación. `scripts/deploy.sh`, que también usa el CD, las lee una por una con `terraform output -raw <nombre>` y escribe `backend_env` tal cual.
 
 ## 14. Despliegue de la aplicación (`scripts/deploy-on-instance.sh`)
 
@@ -438,7 +438,7 @@ Al terminar con `Success`, `deploy.sh` repite la prueba de humo desde afuera con
 
 `ci.yml`, en `pull_request` hacia `main`:
 - Jobs en paralelo: `backend` (Node 22, `npm ci`, `npm test -- --coverage`), `lambdas` (igual) y `terraform` (`hashicorp/setup-terraform` con versión fija 1.16.5, `fmt -check`, `init -backend=false`, `validate`). El job `deploy` del CD también usa `hashicorp/setup-terraform` con la misma versión.
-- `backend/jest.config.js` define `collectCoverageFrom: ["src/**/*.js"]` y `lambdas/jest.config.js` define `["*/index.js", "shared/**/*.js", "!dist/**"]`. Los dos usan `coverageThreshold.global`, que arranca en 0 (al inicio casi todo el código importado no tiene pruebas y un umbral más alto bloquearía todos los PR), sube a 30 cuando los tres flujos tienen pruebas y a 70 en líneas, ramas, funciones y sentencias antes de la entrega final.
+- `backend/jest.config.js` define `collectCoverageFrom: ["src/**/*.js"]` y `lambdas/jest.config.js` define `["*/index.js", "shared/**/*.js", "!dist/**"]`. Los dos usan `coverageThreshold.global` con 70 en líneas, ramas, funciones y sentencias (RNF-09); empezó en 0 y se subió cuando los tres flujos tuvieron pruebas. El job `backend` levanta `amazon/dynamodb-local` como servicio y exporta `DDB_ENDPOINT=http://localhost:8000`: sin él las pruebas de API se saltan, la cobertura baja de 70 y el job falla.
 - Protección de `main`: pull request obligatorio, 1 aprobación, los 3 jobs en verde. Se configura en GitHub (Settings → Branches), no en el repositorio; hay que confirmar que esté activa.
 
 `cd.yml`, en `push` a `main`:

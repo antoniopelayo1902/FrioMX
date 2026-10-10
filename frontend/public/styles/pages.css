@@ -365,7 +365,9 @@ html[data-page="lobby"] .toasts { top: auto; bottom: 16px; }
 
 /* U3-11: historial con lo que pasó en cada partida y un resumen. */
 .activity-table .game-text { display: flex; flex-direction: column; min-width: 0; }
-.activity-table .detail { font-weight: 400; font-size: .85rem; color: var(--muted); overflow-wrap: anywhere; }
+.activity-table .detail { display: flex; flex-direction: column; gap: 1px; font-weight: 400; font-size: .85rem; color: var(--muted); overflow-wrap: anywhere; }
+.activity-table .detail-bets { color: var(--text); opacity: .85; }
+.activity-table .detail .nw { white-space: nowrap; }
 .hist-summary { display: flex; gap: 6px 24px; flex-wrap: wrap; padding: 12px 0 10px; border-bottom: 1px solid var(--line); }
 .hist-summary p { margin: 0; display: inline-flex; align-items: baseline; gap: 4px; flex-wrap: wrap; }
 .hist-summary .k { color: var(--muted); font-weight: 700; }

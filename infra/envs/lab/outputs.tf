@@ -44,6 +44,20 @@ output "tables" {
   value       = module.data.table_names
 }
 
+output "dashboard_url" {
+  description = "Consola de CloudWatch con el dashboard FrioMx."
+  value       = module.monitoring.dashboard_url
+}
+
+output "alarm_names" {
+  value = module.monitoring.alarm_names
+}
+
+output "function_names" {
+  description = "Mapa recharge-worker / daily-bonus / weekly-ranking -> nombre de la Lambda."
+  value       = module.functions.function_names
+}
+
 # Contenido completo de /etc/friomx/backend.env. deploy.sh lo escribe tal cual.
 output "backend_env" {
   value = join("\n", [

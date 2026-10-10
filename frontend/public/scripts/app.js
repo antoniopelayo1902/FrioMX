@@ -371,8 +371,10 @@
     }
 
     // ---------- Control de apuesta ----------
-    // Crea un campo de apuesta con botones ½, ×2 y Máx. Solo acepta enteros de 1 a 10,000.
-    function betControl(container, { initial = 10, label = 'Apuesta', onEnter } = {}) {
+    // Crea un campo de apuesta con botones ½, ×2 y Máx y fichas rápidas. Solo acepta enteros de 1 a 10,000.
+    // Es el mismo control en los 3 juegos (en Ruleta fija el valor de cada ficha que pones en la mesa).
+    const QUICK_CHIPS = [10, 50, 100, 500];
+    function betControl(container, { initial = 10, label = 'Apuesta', onEnter, onChange } = {}) {
         const id = 'bet-' + Math.random().toString(36).slice(2, 7);
         const input = el('input', {
             class: 'input num', id, type: 'text', inputmode: 'numeric', autocomplete: 'off',
@@ -382,13 +384,15 @@
         const dbl = el('button', { class: 'btn btn-sm', type: 'button', 'aria-label': 'Doble', text: '×2' });
         const max = el('button', { class: 'btn btn-sm', type: 'button', 'aria-label': 'Máximo', text: 'Máx' });
         const err = el('div', { class: 'error', id: id + '-err', 'aria-live': 'polite' });
-        const quick = el('div', { class: 'chip-row' }, [10, 50, 100, 500].map((v) => el('button', {
-            class: 'chip-btn', type: 'button', text: num(v), onclick: () => { set(v); input.focus(); },
-        })));
+        const quick = el('div', { class: 'bet-chips', role: 'group', 'aria-label': 'Fichas rápidas' }, QUICK_CHIPS.map((v) => el('button', {
+            class: `bet-chip bet-chip-${v}`, type: 'button', 'data-chip': v, 'aria-pressed': 'false',
+            'aria-label': `${num(v)} fichas`, onclick: () => { set(v); input.focus(); },
+        }, el('span', { text: num(v) }))));
         container.append(el('div', { class: 'bet-box field' },
             el('label', { for: id, text: label }),
             el('div', { class: 'bet-input' }, input, half, dbl, max),
             quick, err));
+        validate();
 
         const limit = () => Math.max(0, Math.min(10000, currentBalance ?? 10000));
         function read() {
@@ -405,13 +409,16 @@
             else if (currentBalance !== null && v > currentBalance) msg = `Solo tienes ${chips(currentBalance)}.`;
             err.textContent = msg;
             input.setAttribute('aria-invalid', msg ? 'true' : 'false');
+            // La ficha rápida que coincide con lo escrito se ve seleccionada.
+            quick.querySelectorAll('button').forEach((b) => b.setAttribute('aria-pressed', String(Number(b.dataset.chip) === v)));
             return msg ? null : v;
         }
-        function set(v) { input.value = String(Math.max(1, Math.floor(v))); validate(); }
+        function changed() { const v = validate(); if (onChange) onChange(v); }
+        function set(v) { input.value = String(Math.max(1, Math.floor(v))); changed(); }
         input.addEventListener('input', () => {
             const clean = input.value.replace(/\D/g, '');
             if (clean !== input.value) input.value = clean;
-            validate();
+            changed();
         });
         input.addEventListener('keydown', (e) => { if (e.key === 'Enter' && onEnter) { e.preventDefault(); onEnter(); } });
         half.addEventListener('click', () => set((read() || 2) / 2));

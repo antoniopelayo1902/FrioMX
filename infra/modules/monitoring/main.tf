@@ -51,6 +51,8 @@ resource "aws_cloudwatch_metric_alarm" "api_5xx" {
   comparison_operator = "GreaterThanOrEqualToThreshold"
   treat_missing_data  = "notBreaching"
   alarm_actions       = [var.ops_topic_arn]
+  # Avisa también la recuperación (OK) para que en la demo se vea el ciclo completo.
+  ok_actions = [var.ops_topic_arn]
 }
 
 resource "aws_cloudwatch_metric_alarm" "recharge_dlq" {
@@ -66,6 +68,8 @@ resource "aws_cloudwatch_metric_alarm" "recharge_dlq" {
   comparison_operator = "GreaterThanOrEqualToThreshold"
   treat_missing_data  = "notBreaching"
   alarm_actions       = [var.ops_topic_arn]
+  # Avisa también la recuperación (OK) para que en la demo se vea el ciclo completo.
+  ok_actions = [var.ops_topic_arn]
 }
 
 # --- Dashboard FrioMx ---
@@ -148,6 +152,10 @@ resource "aws_cloudwatch_dashboard" "main" {
 
 output "dashboard_name" {
   value = aws_cloudwatch_dashboard.main.dashboard_name
+}
+
+output "dashboard_url" {
+  value = "https://${var.region}.console.aws.amazon.com/cloudwatch/home?region=${var.region}#dashboards/dashboard/${aws_cloudwatch_dashboard.main.dashboard_name}"
 }
 
 output "alarm_names" {
