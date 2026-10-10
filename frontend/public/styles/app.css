@@ -157,8 +157,8 @@ h2 { font-size: 1.3rem; }
 .card { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); padding: 20px; box-shadow: var(--shadow); }
 .card + .card { margin-top: 16px; }
 .grid { display: grid; gap: 16px; }
-.grid-2 { grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); }
-.grid-3 { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+.grid-2 { grid-template-columns: repeat(auto-fit, minmax(min(280px, 100%), 1fr)); }
+.grid-3 { grid-template-columns: repeat(auto-fit, minmax(min(220px, 100%), 1fr)); }
 .stack { display: flex; flex-direction: column; gap: 12px; }
 .row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
 
