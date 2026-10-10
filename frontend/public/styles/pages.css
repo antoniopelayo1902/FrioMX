@@ -150,7 +150,8 @@ html[data-session="in"] .public-top, html[data-session="in"] .public-foot { disp
 .wallet-hero .label { color: var(--muted); font-size: .85rem; text-transform: uppercase; letter-spacing: .12em; }
 .wallet-hero .value { font-family: 'Khand', sans-serif; font-size: clamp(2.8rem, 7vw, 4rem); line-height: 1; }
 .wallet-hero .value small { font-size: 1.2rem; color: var(--muted); margin-left: 6px; }
-.packs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+.packs { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+@media (max-width: 400px) { .packs { grid-template-columns: minmax(0, 1fr); } }
 .pack { border: 1px solid var(--line); background: var(--bg-2); border-radius: var(--radius-sm); padding: 16px; display: flex; flex-direction: column; gap: 10px; }
 .pack .chips { font-family: 'Khand', sans-serif; font-size: 1.8rem; line-height: 1; }
 .pack .chips small { font-family: 'Switzer', sans-serif; font-size: .85rem; color: var(--muted); margin-left: 4px; }
@@ -198,7 +199,7 @@ html[data-session="in"] .public-top, html[data-session="in"] .public-foot { disp
 /* ---------- Responsive ---------- */
 @media (max-width: 1100px) {
     .soon-grid { grid-template-columns: repeat(2, 1fr); }
-    .profile-grid { grid-template-columns: 1fr; }
+    .profile-grid { grid-template-columns: minmax(0, 1fr); }
 }
 @media (max-width: 900px) {
     .hero { grid-template-columns: 1fr; gap: 24px; }
