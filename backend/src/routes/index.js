@@ -5,6 +5,9 @@ const { wrap } = require('../middleware/errors');
 const users = require('../services/userService');
 const activity = require('../services/activityService');
 const games = require('../services/gameService');
+const wallet = require('../services/walletService');
+const leaderboard = require('../services/leaderboardService');
+const storage = require('../services/storageService');
 
 const tooMany = (req, res) => res.status(429).json({ error: 'Demasiados intentos, espera un minuto', code: 'RATE_LIMITED' });
 
@@ -25,7 +28,9 @@ function buildRouter({ rng, authLimit = 10, profileLimit = 5 } = {}) {
     }));
     router.get('/auth/user-name', requireAuth, (req, res) => res.json({ name: req.user.name }));
 
-    router.get('/user/profile', requireAuth, (req, res) => res.json(users.profileOf(req.user)));
+    router.get('/user/profile', requireAuth, wrap(async (req, res) => {
+        res.json(await users.profileOf(req.user));
+    }));
     // Con una sesión robada no se puede adivinar la contraseña actual: 5 intentos fallidos por minuto por usuario.
     const profileLimiter = rateLimit({
         windowMs: 60 * 1000, limit: profileLimit, handler: tooMany,
@@ -41,11 +46,38 @@ function buildRouter({ rng, authLimit = 10, profileLimit = 5 } = {}) {
         res.json(await activity.listActivity(req.userId, req.query));
     }));
 
-    // ----- Foto de perfil: se activa cuando exista el bucket de S3 -----
-    router.get('/profile/image', requireAuth, (req, res) => res.json({ success: true, profileImage: null }));
-    const notYet = (req, res) => res.status(503).json({ error: 'La foto de perfil estará disponible pronto', code: 'NOT_AVAILABLE' });
-    router.post('/profile/upload', requireAuth, notYet);
-    router.delete('/profile/delete', requireAuth, notYet);
+    // ----- Foto de perfil: sin UPLOADS_BUCKET responde 503 NOT_AVAILABLE -----
+    const needsBucket = (req, res, next) => (storage.enabled() ? next()
+        : res.status(503).json({ error: 'La foto de perfil estará disponible pronto', code: 'NOT_AVAILABLE' }));
+    router.get('/profile/image', requireAuth, wrap(async (req, res) => {
+        res.json(await storage.getProfileImage(req.user));
+    }));
+    router.post('/profile/upload', requireAuth, needsBucket, storage.upload, wrap(async (req, res) => {
+        res.json(await storage.saveProfileImage(req.user, req.file));
+    }));
+    router.delete('/profile/delete', requireAuth, needsBucket, wrap(async (req, res) => {
+        res.json(await storage.deleteProfileImage(req.user));
+    }));
+
+    // ----- Recargas (sin RECHARGE_QUEUE_URL, POST responde 503 QUEUE_UNAVAILABLE) -----
+    router.get('/wallet/packages', requireAuth, (req, res) => res.json(wallet.listPackages()));
+    router.post('/wallet/recharges', requireAuth, wrap(async (req, res) => {
+        res.status(202).json(await wallet.createRecharge(req.user, req.body, req.get('Idempotency-Key')));
+    }));
+    router.get('/wallet/recharges/:rechargeId', requireAuth, wrap(async (req, res) => {
+        res.json(await wallet.getRecharge(req.user, req.params.rechargeId));
+    }));
+
+    // ----- Ranking semanal -----
+    router.get('/leaderboard/current', requireAuth, wrap(async (req, res) => {
+        res.json(await leaderboard.current(req.user));
+    }));
+    router.get('/leaderboard/last', requireAuth, wrap(async (req, res) => {
+        res.json(await leaderboard.last(req.query));
+    }));
+    router.get('/leaderboard/weeks', requireAuth, wrap(async (req, res) => {
+        res.json(await leaderboard.weeks());
+    }));
 
     // ----- Juegos (flujo 1) -----
     router.get('/games/hi-lo/active', requireAuth, wrap(async (req, res) => {

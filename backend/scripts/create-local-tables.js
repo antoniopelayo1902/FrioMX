@@ -31,7 +31,9 @@ const tables = [
         KeySchema: [{ AttributeName: 'weekId', KeyType: 'HASH' }, { AttributeName: 'userId', KeyType: 'RANGE' }],
         AttributeDefinitions: [S('weekId'), S('userId')],
     },
+    { TableName: T.recharges, KeySchema: [{ AttributeName: 'rechargeId', KeyType: 'HASH' }], AttributeDefinitions: [S('rechargeId')] },
     { TableName: T.gameRounds, KeySchema: [{ AttributeName: 'gameId', KeyType: 'HASH' }], AttributeDefinitions: [S('gameId')] },
+    { TableName: T.leaderboard, KeySchema: [{ AttributeName: 'weekId', KeyType: 'HASH' }], AttributeDefinitions: [S('weekId')] },
 ];
 
 (async () => {

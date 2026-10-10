@@ -17,7 +17,8 @@ app.use((req, res, next) => {
     'Permissions-Policy': 'camera=(), microphone=(), geolocation=(), payment=()',
     'Content-Security-Policy': [
       "default-src 'self'",
-      "img-src 'self' data:",
+      // Las fotos de perfil llegan como URL firmada de S3.
+      "img-src 'self' data: https://*.s3.amazonaws.com https://*.s3.us-east-1.amazonaws.com",
       "style-src 'self' 'unsafe-inline'",
       "script-src 'self'",
       "connect-src 'self'",
@@ -62,6 +63,7 @@ const pages = {
   '/rules': 'rules.html',
   '/balance': 'balance.html',
   '/activity': 'activity.html',
+  '/ranking': 'ranking.html',
   '/roulette': 'roulette.html',
   '/hi-lo': 'hi-lo.html',
   '/mines': 'mineBet.html',

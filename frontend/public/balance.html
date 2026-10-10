@@ -8,6 +8,8 @@
     <link rel="stylesheet" href="/styles/app.css">
     <link rel="stylesheet" href="/styles/pages.css">
     <script src="/scripts/app.js"></script>
+    <script src="/scripts/ui.js" defer></script>
+    <script src="/scripts/balance.js" defer></script>
 </head>
 <body data-shell>
     <main id="main">
@@ -33,6 +35,8 @@
                 <ul class="facts">
                     <li><strong>Son virtuales.</strong> No se compran con dinero ni se pueden cambiar por dinero o premios.</li>
                     <li><strong>Empiezas con 1,000.</strong> Te las damos al crear tu cuenta.</li>
+                    <li><strong>Bono diario de 100 fichas.</strong> Si jugaste en los últimos 7 días, cada día a las 8:00 am se suman solas.</li>
+                    <li><strong>Premios cada lunes.</strong> Los 3 que más fichas ganaron en la semana reciben 1,000, 500 y 250. Mira el <a href="/ranking">ranking</a>.</li>
                     <li><strong>Cada partida se refleja al momento.</strong> Lo que ganas o pierdes se suma o resta aquí y queda en tu <a href="/activity">historial</a>.</li>
                     <li><strong>Apuesta máxima: 10,000 fichas</strong> por jugada, y nunca más de lo que tienes.</li>
                 </ul>
@@ -41,27 +45,12 @@
             <section class="card" aria-labelledby="packs-title">
                 <div class="recent-head">
                     <h2 id="packs-title">Recargar fichas</h2>
-                    <span class="badge badge-live">Próximamente</span>
                 </div>
-                <p class="muted">Las recargas todavía no están disponibles. Mientras tanto, juega con las fichas que ya tienes.</p>
-                <div class="packs">
-                    <div class="pack" aria-disabled="true">
-                        <div class="chips">500<small>fichas</small></div>
-                        <button class="btn btn-sm btn-block" type="button" disabled>Próximamente</button>
-                    </div>
-                    <div class="pack" aria-disabled="true">
-                        <div class="chips">1,000<small>fichas</small></div>
-                        <button class="btn btn-sm btn-block" type="button" disabled>Próximamente</button>
-                    </div>
-                    <div class="pack" aria-disabled="true">
-                        <div class="chips">2,500<small>fichas</small></div>
-                        <button class="btn btn-sm btn-block" type="button" disabled>Próximamente</button>
-                    </div>
-                    <div class="pack" aria-disabled="true">
-                        <div class="chips">5,000<small>fichas</small></div>
-                        <button class="btn btn-sm btn-block" type="button" disabled>Próximamente</button>
-                    </div>
+                <p class="muted packs-note">Las recargas son <strong>gratis</strong>: son fichas virtuales, no cuestan dinero. Puedes recargar hasta <strong>3 veces al día</strong>. Si confirmaste el correo de suscripción que te enviamos al registrarte, te avisamos por correo cuando tu recarga esté lista.</p>
+                <div class="packs" id="packs" aria-busy="true">
+                    <p class="muted">Cargando paquetes…</p>
                 </div>
+                <div class="recharge-status" id="recharge-status" role="status" aria-live="polite" hidden></div>
             </section>
         </div>
     </main>

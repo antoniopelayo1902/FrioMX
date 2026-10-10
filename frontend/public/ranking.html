@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="es" data-auth="private" data-page="ranking">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Ranking · FrioMx</title>
+    <link rel="icon" href="/assets/images/icon.png" type="image/png">
+    <link rel="stylesheet" href="/styles/app.css">
+    <link rel="stylesheet" href="/styles/pages.css">
+    <script src="/scripts/app.js"></script>
+    <script src="/scripts/ui.js" defer></script>
+    <script src="/scripts/ranking.js" defer></script>
+</head>
+<body data-shell>
+    <main id="main">
+        <div class="page-head">
+            <div>
+                <h1>Ranking semanal</h1>
+                <p>Cada lunes se premia a los 3 jugadores que más fichas ganaron en la semana.</p>
+            </div>
+            <a class="btn btn-primary" href="/index_logIn">Ir a jugar</a>
+        </div>
+
+        <ul class="prizes" aria-label="Premios de cada semana">
+            <li class="prize p1"><span class="place">1.º lugar</span><span class="amount">+1,000</span><span class="muted">fichas</span></li>
+            <li class="prize p2"><span class="place">2.º lugar</span><span class="amount">+500</span><span class="muted">fichas</span></li>
+            <li class="prize p3"><span class="place">3.º lugar</span><span class="amount">+250</span><span class="muted">fichas</span></li>
+        </ul>
+
+        <div class="stack">
+            <section class="card rank-card" aria-labelledby="current-title">
+                <div class="recent-head">
+                    <div>
+                        <h2 id="current-title">Esta semana</h2>
+                        <p class="muted week-range" id="current-range"></p>
+                    </div>
+                    <span class="badge badge-live">En curso</span>
+                </div>
+                <div class="rank-me" id="current-me" aria-live="polite" hidden></div>
+                <div id="current" aria-live="polite"><p class="empty">Cargando ranking…</p></div>
+                <p class="table-note">La ganancia es lo que ganaste menos lo que apostaste en la semana (de lunes a domingo).</p>
+            </section>
+
+            <section class="card rank-card" aria-labelledby="last-title">
+                <div class="recent-head rank-head">
+                    <div>
+                        <h2 id="last-title">Semanas cerradas</h2>
+                        <p class="muted week-range" id="last-range"></p>
+                    </div>
+                    <div class="field week-pick" id="week-pick" hidden>
+                        <label for="week">Semana</label>
+                        <select class="input" id="week"></select>
+                    </div>
+                </div>
+                <div id="last" aria-live="polite"><p class="empty">Cargando semanas…</p></div>
+            </section>
+        </div>
+    </main>
+</body>
+</html>

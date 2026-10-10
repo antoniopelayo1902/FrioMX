@@ -1,0 +1,47 @@
+name: CD
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-lab
+  cancel-in-progress: false
+
+jobs:
+  test:
+    uses: ./.github/workflows/ci.yml
+
+  deploy:
+    needs: test
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.16.5"
+          # Sin wrapper: deploy.sh lee `terraform output -raw` tal cual.
+          terraform_wrapper: false
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
+          aws-region: us-east-1
+      - name: Escribir backend.hcl y lab.tfvars
+        env:
+          TF_BACKEND_HCL: ${{ secrets.TF_BACKEND_HCL }}
+          TF_LAB_TFVARS: ${{ secrets.TF_LAB_TFVARS }}
+        run: |
+          printf '%s\n' "$TF_BACKEND_HCL" > infra/envs/lab/backend.hcl
+          printf '%s\n' "$TF_LAB_TFVARS" > infra/envs/lab/lab.tfvars
+      - name: Desplegar
+        run: bash scripts/deploy.sh

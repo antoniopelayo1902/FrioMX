@@ -28,8 +28,15 @@
         <div class="profile-grid">
             <aside class="card profile-side" aria-label="Resumen de la cuenta">
                 <span class="avatar avatar-xl" data-user-initial aria-hidden="true"></span>
-                <button class="btn btn-sm" type="button" disabled aria-describedby="photo-note">Cambiar foto (próximamente)</button>
-                <span class="sr-only" id="photo-note">Subir foto de perfil todavía no está disponible.</span>
+                <div class="photo-ctrl" id="photo-ctrl">
+                    <input class="sr-only" type="file" id="photo-input" accept="image/jpeg,image/png,image/webp" aria-describedby="photo-hint photo-msg" tabindex="-1">
+                    <div class="row photo-btns">
+                        <button class="btn btn-sm" type="button" id="photo-pick" disabled>Cambiar foto</button>
+                        <button class="btn btn-sm btn-ghost" type="button" id="photo-remove" hidden>Quitar foto</button>
+                    </div>
+                    <p class="hint" id="photo-hint">JPG, PNG o WebP de hasta 5 MB.</p>
+                    <p class="photo-msg" id="photo-msg" role="status" aria-live="polite"></p>
+                </div>
                 <h2 id="side-name" data-user-name>…</h2>
                 <p class="email" id="side-email">…</p>
                 <div class="divider"></div>

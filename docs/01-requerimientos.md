@@ -11,7 +11,7 @@ FrioMx es un casino social con fichas virtuales, sin dinero real. Los usuarios s
 ## 2. Contexto y supuestos
 
 - De un proyecto previo se reutiliza la aplicación: frontend web, backend Node.js/Express y la lógica de los tres juegos. Esa aplicación usa MongoDB como almacenamiento.
-- Toda la infraestructura de AWS, los flujos 2 y 3, la capa de datos en DynamoDB, el pipeline de CI/CD, las pruebas unitarias y el monitoreo se construyen durante el semestre.
+- La infraestructura de AWS, los flujos 2 y 3, la capa de datos en DynamoDB, el pipeline de CI/CD, las pruebas unitarias y el monitoreo forman parte de FrioMx.
 - El entorno compartido (pipeline, demo y entregas) vive en una sola cuenta de AWS Academy Learner Lab, la del responsable de CI/CD, región `us-east-1`. Cada integrante usa su propio lab como entorno de desarrollo con el mismo Terraform.
 - Las fichas no tienen valor monetario. No hay pagos reales ni retiros.
 
@@ -55,7 +55,7 @@ Todos conocen el proyecto completo y revisan los pull requests de los demás.
 
 ### 5.3 Recarga de fichas (Flujo 2)
 
-- **RF-12** El jugador puede solicitar una recarga eligiendo un paquete fijo: 500, 1000 o 5000 fichas.
+- **RF-12** El jugador puede solicitar una recarga eligiendo un paquete fijo: 500, 1000 o 2500 fichas.
 - **RF-13** Máximo 3 recargas por jugador por día calendario (hora de Ciudad de México). La cuarta se rechaza con un mensaje claro.
 - **RF-14** La solicitud se acepta de inmediato y se procesa de forma asíncrona. El jugador ve el estado (pendiente, completada o fallida) y su saldo actualizado al completarse. Una recarga que sigue pendiente 5 minutos después de creada se muestra como fallida.
 - **RF-15** Al completarse la recarga, el jugador recibe un correo de confirmación (si confirmó su suscripción).
@@ -125,5 +125,5 @@ El flujo 3 es el que aprovecha características propias de la nube que son difí
 ## 11. Criterios de aceptación por fase
 
 - **Fase 2 (15 oct).** Frontend y backend corriendo en EC2 con datos en DynamoDB. Registro, login, perfil, hi-lo, ruleta, minas (resuelta en el servidor, con cobro) e historial funcionando en la nube. Flujo 2 completo de punta a punta. Lambdas del flujo 3 desplegadas y programadas. Infraestructura creada con Terraform y desplegada con un script. CI corriendo pruebas en cada pull request.
-- **Sesión 12 nov.** Aplicación 100% en la nube, incluyendo minas del lado del servidor y página de ranking. Pruebas unitarias con cobertura de 70%. CD automático al hacer merge a `main`.
-- **Fase 3 (30 nov / 3 dic).** Dashboard, 5 métricas y 2 alarmas funcionando. Demo en vivo de los 3 flujos, CI/CD y monitoreo.
+- **Sesión 12 nov.** Aplicación 100% en la nube. Pruebas unitarias con cobertura de 70%. Ya se entregaron en Fase 2 minas del lado del servidor, la página de ranking y el CD automático al hacer merge a `main` (`.github/workflows/cd.yml`). Falta subir el umbral de cobertura, que hoy está en 0, hasta 70%.
+- **Fase 3 (30 nov / 3 dic).** Dashboard, 5 métricas y 2 alarmas funcionando. Demo en vivo de los 3 flujos, CI/CD y monitoreo. El dashboard y las 2 alarmas ya están definidos en Terraform (módulo `monitoring`); falta verificarlos en la nube con tráfico real.

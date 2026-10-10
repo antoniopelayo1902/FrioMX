@@ -7,13 +7,14 @@ const { isoWeekId } = require('../lib/time');
 const v = require('../lib/validate');
 const engine = require('./gameEngine');
 const { getUser } = require('./userService');
+const metrics = require('./metrics');
 
 const T = config.tables;
 const ROUND_TTL_SECONDS = 3600;
 
 const GAMES = {
-    hilo: { label: 'Hi-Lo', idAttr: 'activeHiloId', expAttr: 'activeHiloExp' },
-    mines: { label: 'Minas', idAttr: 'activeMinesId', expAttr: 'activeMinesExp' },
+    hilo: { label: 'Hi-Lo', metric: 'HiLo', idAttr: 'activeHiloId', expAttr: 'activeHiloExp' },
+    mines: { label: 'Minas', metric: 'Mines', idAttr: 'activeMinesId', expAttr: 'activeMinesExp' },
 };
 
 const insufficientFunds = () => new AppError(409, 'INSUFFICIENT_FUNDS', 'No tienes fichas suficientes para esa apuesta');
@@ -23,6 +24,7 @@ const forbidden = () => new AppError(403, 'FORBIDDEN', 'La partida es de otro ju
 const conflict = () => new AppError(409, 'CONFLICT', 'Otra acción llegó al mismo tiempo, intenta de nuevo');
 
 const nowSeconds = () => Math.floor(Date.now() / 1000);
+const POINTER_GRACE_SECONDS = 30;
 
 function resultOf(net) {
     return net > 0 ? 'GANADA' : net < 0 ? 'PERDIDA' : 'IGUAL';
@@ -82,9 +84,16 @@ async function runTx(items, onConditionFailed = {}) {
     throw conflict();
 }
 
+// Solo se llama después de que la transacción ya se aplicó: si esta lectura falla, la jugada
+// sigue siendo válida, así que se responde null (el frontend vuelve a pedir el saldo) y no 500.
 async function balanceOf(userId) {
-    const user = await getUser(userId);
-    return user ? user.balance : 0;
+    try {
+        const user = await getUser(userId);
+        return user ? user.balance : 0;
+    } catch (err) {
+        console.warn('No se pudo leer el saldo tras la jugada', userId, err.name);
+        return null;
+    }
 }
 
 async function readRound(gameId) {
@@ -150,9 +159,11 @@ async function startRound(user, game, bet, extra) {
             Update: {
                 TableName: T.users, Key: { userId: user.userId },
                 UpdateExpression: 'SET balance = balance - :bet, lastPlayedAt = :now, #aid = :id, #aexp = :exp',
+                // Margen de 30 s: finishRound acepta cerrar hasta expiresAt con un :now calculado antes de sus
+                // reintentos; así el puntero de una ronda nueva nunca se pisa con el cierre tardío de la vieja.
                 ConditionExpression: 'balance >= :bet AND (attribute_not_exists(#aid) OR #aexp < :nowSec)',
                 ExpressionAttributeNames: { '#aid': g.idAttr, '#aexp': g.expAttr },
-                ExpressionAttributeValues: { ':bet': bet, ':now': nowIso, ':id': gameId, ':exp': exp, ':nowSec': nowSeconds() },
+                ExpressionAttributeValues: { ':bet': bet, ':now': nowIso, ':id': gameId, ':exp': exp, ':nowSec': nowSeconds() - POINTER_GRACE_SECONDS },
             },
         },
         {
@@ -172,6 +183,7 @@ async function startRound(user, game, bet, extra) {
     }
 }
 
+// whyFailed lo usa para liberar un puntero a una ronda ya cerrada o vencida.
 // Quita el puntero solo si sigue apuntando a esa ronda (nunca borra el de una ronda más nueva).
 async function clearPointer(userId, g, gameId) {
     try {
@@ -187,7 +199,8 @@ async function clearPointer(userId, g, gameId) {
     }
 }
 
-// Cierra la ronda: cambia su estado, acredita el pago, libera el puntero y deja el resultado en el historial.
+// Cierra la ronda: cambia su estado, acredita el pago y libera el puntero en una sola transacción,
+// y deja el resultado en el historial.
 async function finishRound(user, round, { status, payout, setRound = {}, detail }) {
     const g = GAMES[round.game];
     const net = payout - round.bet;
@@ -210,11 +223,15 @@ async function finishRound(user, round, { status, payout, setRound = {}, detail 
                 ExpressionAttributeValues: values,
             },
         },
+        // El puntero se libera en la misma transacción (LLD §4.3). Es seguro sin condición extra:
+        // la condición del ítem 0 (ACTIVE y sin vencer) garantiza que el puntero es el de esta ronda,
+        // porque startRound solo lo reemplaza cuando ya venció.
         {
             Update: {
                 TableName: T.users, Key: { userId: user.userId },
-                UpdateExpression: 'ADD balance :p',
+                UpdateExpression: 'ADD balance :p REMOVE #aid, #aexp',
                 ConditionExpression: 'attribute_exists(userId)',
+                ExpressionAttributeNames: { '#aid': g.idAttr, '#aexp': g.expAttr },
                 ExpressionAttributeValues: { ':p': payout },
             },
         },
@@ -229,7 +246,7 @@ async function finishRound(user, round, { status, payout, setRound = {}, detail 
         if (fresh && fresh.expiresAt < nowSeconds()) return notFound();
         return conflict();
     } });
-    await clearPointer(user.userId, g, round.gameId);
+    metrics.countGame(g.metric);
     return net;
 }
 
@@ -295,6 +312,7 @@ async function roulettePlay(user, body = {}, rng) {
         }, true),
         weeklyItem(isoWeekId(now), user, spin.net, true),
     ], { 0: insufficientFunds });
+    metrics.countGame('Roulette');
     return {
         winningSlot: spin.winningSlot,
         winningIndex: spin.winningIndex,

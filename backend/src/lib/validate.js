@@ -1,4 +1,5 @@
 const { badRequest } = require('./errors');
+const { isUuidVersion } = require('./uuid');
 
 const MIN_BET = 1;
 const MAX_BET = 10000;
@@ -17,6 +18,11 @@ function uuidV4(value, field) {
         throw badRequest(`${field} inválido`);
     }
     return value;
+}
+
+function uuidV5(value, field) {
+    if (!isUuidVersion(value, 5)) throw badRequest(`${field} inválido`);
+    return value.toLowerCase();
 }
 
 function email(value) {
@@ -56,4 +62,4 @@ function age(value) {
     return n;
 }
 
-module.exports = { betAmount, uuidV4, email, name, password, age, MAX_BET };
+module.exports = { betAmount, uuidV4, uuidV5, email, name, password, age, MAX_BET };

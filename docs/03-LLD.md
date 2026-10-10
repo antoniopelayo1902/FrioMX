@@ -6,71 +6,86 @@ Versión 1.0, 8 de octubre de 2026. Complementa `02-HLD.md`. Las referencias a a
 
 ```
 FrioMX/
-  frontend/                 servidor Express estático + public/
+  frontend/
+    server.js               servidor Express: páginas, 404, cabeceras de seguridad y, solo en desarrollo, proxy de /api
+    public/                 páginas HTML, assets/, styles/ y scripts/ (app.js, ui.js y un script por página)
   backend/
-    server.js
+    server.js               carga el secreto y arranca la API
+    jest.config.js
+    scripts/create-local-tables.js   crea las 7 tablas en DynamoDB Local
     src/
       app.js                arma Express (para pruebas sin listen)
-      config/env.js         lee y valida variables de entorno
-      config/secrets.js     lee el secreto JWT al arrancar
+      config/env.js         lee las variables de entorno (las de AWS son opcionales)
+      config/secrets.js     usa JWT_SECRET o lee el secreto JWT de Secrets Manager al arrancar
       middleware/auth.js    verifica token, pone req.userId
       middleware/metrics.js latencia y 5xx por petición
       middleware/errors.js  manejador central de errores
-      routes/               auth, user, profile, games, wallet, leaderboard, health
-      controllers/
+      routes/index.js       todas las rutas de /api
       services/
         gameEngine.js       lógica pura de hi-lo, ruleta y minas
         gameService.js      transacciones de juego
-        walletService.js    recargas
-        notificationService.js  suscripción SNS
+        userService.js      registro, login y perfil
+        activityService.js  historial paginado
+        walletService.js    paquetes y recargas
+        leaderboardService.js  ranking en curso y semanas cerradas
+        notificationService.js suscripción SNS
         storageService.js   S3 fotos de perfil
         metrics.js          buffer y envío a CloudWatch
-      repositories/         acceso a cada tabla de DynamoDB
-      lib/time.js           fecha local y semana ISO en America/Mexico_City
-    test/
+      lib/
+        ddb.js              cliente de DynamoDB (DDB_ENDPOINT en local)
+        aws.js              clientes de SQS, SNS, S3, Secrets Manager y CloudWatch, creados al primer uso
+        time.js             fecha local y semana ISO en America/Mexico_City
+        uuid.js             validación de versión de UUID y derivación de ids v5
+        validate.js         validaciones de entrada
+        errors.js           AppError y badRequest
+    test/                   api, cloud, cloudUnit, gameEngine y lib (.test.js)
   lambdas/
-    shared/                 time.js, ddb.js, sns.js
+    package.json, jest.config.js
     build.sh                arma lambdas/dist/<función>/ con <función>/index.js y shared/ (misma estructura relativa que el repo)
+    shared/                 ddb.js, metrics.js, sns.js, time.js
     recharge-worker/index.js
     daily-bonus/index.js
     weekly-ranking/index.js
-    test/
+    test/                   una prueba por función, shared y helpers.js
   infra/
     bootstrap/bootstrap-state.sh
-    envs/lab/               main.tf, variables.tf, outputs.tf, backend.hcl.example, lab.tfvars.example
     cloudwatch-agent.json   configuración del agente de logs
-    modules/                network, compute, data, storage, messaging, functions, secrets, monitoring
+    envs/lab/               main.tf, variables.tf, outputs.tf, versions.tf, .terraform.lock.hcl, backend.hcl.example, lab.tfvars.example
+    modules/                network, compute (con user_data.sh), data, storage, secrets, messaging, functions, monitoring
   scripts/
-    deploy-on-instance.sh   se ejecuta en EC2 vía SSM
     deploy.sh               build de Lambdas, terraform apply, empaquetado, subida a S3 y SSM (lo usan las personas y el CD)
+    deploy-on-instance.sh   se ejecuta en EC2 vía SSM
     update-gh-secrets.sh    copia credenciales del lab a secretos de GitHub
-    seed.js                 jugadores y partidas de prueba (`--week <YYYY-Www>`, `--include-email <correo>`)
-  backend/jest.config.js, lambdas/jest.config.js
+    seed.js                 jugadores y estadísticas de una semana pasada para probar el cierre del ranking (`--week <YYYY-Www>`, `--include-email <correo>`)
   .github/workflows/ci.yml, cd.yml
   docs/
 ```
 
 ## 2. Configuración
 
-Variables de entorno del backend, escritas en `/etc/friomx/backend.env` por el script de despliegue a partir de las salidas de Terraform. `config/env.js` falla al arrancar si falta alguna obligatoria.
+Variables de entorno del backend. En EC2 viven en `/etc/friomx/backend.env`, que el script de despliegue escribe tal cual desde la salida `backend_env` de Terraform; en local salen de `backend/.env`. `config/env.js` solo exige una de `JWT_SECRET` o `JWT_SECRET_ARN` y no arranca sin ninguna. Las variables de AWS son opcionales: si falta una, la función que depende de ella se apaga limpia y el resto de la app sigue funcionando.
 
-| Variable | Ejemplo | Obligatoria |
-|---|---|---|
-| `PORT` | 3000 | no (3000) |
-| `AWS_REGION` | us-east-1 | sí |
-| `TABLE_USERS`, `TABLE_USER_EMAILS`, `TABLE_ACTIVITY`, `TABLE_WEEKLY_STATS`, `TABLE_RECHARGES`, `TABLE_GAME_ROUNDS`, `TABLE_LEADERBOARD` | friomx-users | sí |
-| `JWT_SECRET_ARN` | arn:aws:secretsmanager:... | sí |
-| `UPLOADS_BUCKET` | friomx-uploads-123456789012 | sí |
-| `RECHARGE_QUEUE_URL` | https://sqs.us-east-1.amazonaws.com/.../friomx-recharges | sí |
-| `USER_TOPIC_ARN` | arn:aws:sns:...:friomx-user-notifications | sí |
-| `METRICS_NAMESPACE` | FrioMx | no (FrioMx) |
-| `APP_TZ` | America/Mexico_City | no |
+| Variable | Ejemplo | Obligatoria | Si falta |
+|---|---|---|---|
+| `PORT` | 3000 | no | 3000 |
+| `HOST` | 127.0.0.1 | no | 127.0.0.1 (en EC2 solo escucha nginx hacia afuera) |
+| `AWS_REGION` | us-east-1 | no | us-east-1 |
+| `APP_TZ` | America/Mexico_City | no | America/Mexico_City |
+| `TABLE_USERS`, `TABLE_USER_EMAILS`, `TABLE_ACTIVITY`, `TABLE_WEEKLY_STATS`, `TABLE_RECHARGES`, `TABLE_GAME_ROUNDS`, `TABLE_LEADERBOARD` | friomx-users | no | los nombres `friomx-*` del §4 |
+| `JWT_SECRET_ARN` | arn:aws:secretsmanager:... | una de las dos | en la nube; el valor se lee con `GetSecretValue` al arrancar |
+| `JWT_SECRET` | 64 caracteres hex | una de las dos | en local; si existe se usa tal cual y no se llama a Secrets Manager |
+| `UPLOADS_BUCKET` | friomx-uploads-123456789012 | no | subir y quitar foto responden 503 NOT_AVAILABLE y `GET /profile/image` regresa `available: false` |
+| `RECHARGE_QUEUE_URL` | https://sqs.us-east-1.amazonaws.com/.../friomx-recharges | no | `POST /wallet/recharges` responde 503 QUEUE_UNAVAILABLE |
+| `USER_TOPIC_ARN` | arn:aws:sns:...:friomx-user-notifications | no | el registro no crea suscripción SNS, sin error |
+| `METRICS_NAMESPACE` | FrioMx | no | FrioMx |
+| `METRICS_ENABLED` | true | no | sin `true` no se llama a `PutMetricData` |
+| `DDB_ENDPOINT` | http://localhost:8000 | no | solo en local, apunta a DynamoDB Local; en la nube no se define |
 
-Las credenciales de AWS las da el perfil de instancia `LabInstanceProfile`. No hay llaves en archivos.
+`backend_env` incluye todas salvo `JWT_SECRET` y `DDB_ENDPOINT`, con `METRICS_ENABLED=true`. Las credenciales de AWS las da el perfil de instancia `LabInstanceProfile`. No hay llaves en archivos.
 
 ## 3. Contrato de la API
 
-Todas las rutas van bajo `/api`. Las marcadas con candado requieren `Authorization: Bearer <token>`. El usuario se toma de `req.userId`, que sale del token. Ninguna ruta acepta `userId` ni `id` del cliente. Los errores responden `{ "error": "<mensaje>", "code": "<CODIGO>" }`. Las páginas de juego ya leen `error`. `register.js` se ajusta para leer `error` en lugar de `message`. `login.js` muestra un texto fijo y no necesita cambio, salvo mostrar el mensaje de 429 cuando se active el límite de intentos.
+Todas las rutas van bajo `/api`. Las marcadas con candado requieren `Authorization: Bearer <token>`. El usuario se toma de `req.userId`, que sale del token. Ninguna ruta acepta `userId` ni `id` del cliente. Los errores responden `{ "error": "<mensaje>", "code": "<CODIGO>" }`. El cliente de la API del frontend (`scripts/app.js`, §17) traduce los códigos conocidos a mensajes en español (por ejemplo RATE_LIMITED) y, si no conoce el código, muestra `error`.
 
 | Método y ruta | Auth | Entrada | Respuesta |
 |---|---|---|---|
@@ -84,7 +99,7 @@ Todas las rutas van bajo `/api`. Las marcadas con candado requieren `Authorizati
 | GET /user/activity | 🔒 | `?limit=20&cursor=` | 200 `{items:[{nameGame, BetStatus, balance, dateGame}], nextCursor}` |
 | POST /profile/upload | 🔒 | multipart `profileImage` | 200 `{success, profileImage}` (URL firmada) |
 | DELETE /profile/delete | 🔒 | | 200 `{success}` |
-| GET /profile/image | 🔒 | | 200 `{success, profileImage}` (URL firmada, 15 min) |
+| GET /profile/image | 🔒 | | 200 `{success, available, profileImage}`: `available` es `false` sin `UPLOADS_BUCKET`; `profileImage` es la URL firmada (15 min) o `null` |
 | GET /games/hi-lo/active | 🔒 | | 200 `{round: null \| {roundId, oldCard, bet, options}}` |
 | POST /games/hi-lo/deal | 🔒 | `{betAmount}` | 201 `{roundId, oldCard, bet, options:{higher, lower}, newBalance}`; cada opción es `{multiplier, chance}` o `null`. 409 ROUND_ACTIVE (con `gameId`) si ya hay una ronda abierta |
 | POST /games/hi-lo | 🔒 | `{roundId, prediction:"higher"\|"lower"}` | 200 `{won, tie, oldCard, newCard, prediction, bet, payout, amountChange, newBalance}` |
@@ -97,10 +112,10 @@ Todas las rutas van bajo `/api`. Las marcadas con candado requieren `Authorizati
 | POST /wallet/recharges | 🔒 | `{packageId}` + cabecera `Idempotency-Key` (UUID) | 202 `{rechargeId, status}` |
 | GET /wallet/recharges/:rechargeId | 🔒 | | 200 `{rechargeId, status, chips, createdAt, completedAt}` |
 | GET /leaderboard/current | 🔒 | | 200 `{weekId, top:[{rank, name, net}], me:{rank, net, gamesPlayed}}` (top 10; `me.rank` sale del mismo orden y es `null` si no ha jugado en la semana) |
-| GET /leaderboard/last | 🔒 | `?weekId=` opcional, solo semanas pasadas | 200 `{weekId, top:[{rank, name, net, prize}]}` o 404. Sin `weekId` regresa la semana anterior a la actual |
+| GET /leaderboard/last | 🔒 | `?weekId=` opcional, solo semanas pasadas | 200 `{weekId, top:[{rank, name, net, prize}]}` o 404. Sin `weekId` regresa la última semana cerrada |
 | GET /leaderboard/weeks | 🔒 | | 200 `[weekId]` de las semanas cerradas, de la más reciente a la más antigua |
 
-Se eliminan respecto a la base: `PUT /user/balance`, `POST /user/activity`, las rutas de pagos, todas las rutas `/assets/*` (el frontend no las usa, solo están declaradas en `config.js`), y los parámetros `?id=` y `userId` en el cuerpo. La ruta de la base que recibía `won` del navegador para minas ya no existe: minas se resuelve en el servidor desde Fase 2 (§5.3).
+Se eliminan respecto a la base: `PUT /user/balance`, `POST /user/activity`, las rutas de pagos, todas las rutas `/assets/*` (el frontend no las usa), y los parámetros `?id=` y `userId` en el cuerpo. La ruta de la base que recibía `won` del navegador para minas ya no existe: minas se resuelve en el servidor desde Fase 2 (§5.3).
 
 Códigos de error comunes:
 
@@ -142,7 +157,7 @@ Notación: en este documento las expresiones se escriben abreviadas para leerlas
 ### 4.1 Esquemas
 
 **friomx-users** (PK `userId` S, UUID v4)
-`name`, `age` N, `email`, `passwordHash`, `balance` N, `profileImageKey`, `notifySubscriptionArn`, `createdAt` (ISO UTC), `lastPlayedAt` (ISO UTC), `lastBonusDate` (`YYYY-MM-DD` local), `rechargeDate` (`YYYY-MM-DD` local), `rechargeCount` N.
+`name`, `age` N, `email`, `passwordHash`, `tokenVersion` N, `balance` N, `profileImageKey`, `notifySubscriptionArn`, `notifyEmail`, `pendingUnsubscribeArns` L, `createdAt` (ISO UTC), `lastPlayedAt` (ISO UTC), `lastBonusDate` (`YYYY-MM-DD` local), `rechargeDate` (`YYYY-MM-DD` local), `rechargeCount` N.
 
 **friomx-user-emails** (PK `email` S)
 `userId`. Existe solo para garantizar unicidad del correo.
@@ -157,7 +172,7 @@ Notación: en este documento las expresiones se escriben abreviadas para leerlas
 `userId`, `packageId`, `chips` N, `status` (`PENDING`|`COMPLETED`), `createdAt`, `completedAt`. La API responde `FAILED` cuando `status = PENDING` y `createdAt` tiene más de 5 minutos. Ese valor no se guarda: si después la recarga se reprocesa desde la cola de fallidos y se completa, la API pasa a responder `COMPLETED`.
 
 **friomx-game-rounds** (PK `gameId` S, TTL `expiresAt` N epoch)
-`userId`, `game` (`hilo`|`mines`), `status` (`ACTIVE`|`DONE`|`WON`|`LOST`), `createdAt`.
+`userId`, `game` (`hilo`|`mines`), `status` (`ACTIVE`|`WON`|`LOST`|`CASHED`), `createdAt`.
 Hi-lo: `oldCard` N, `bet` N, `weekId` S. Minas: `bet` N, `weekId` S (semana de inicio), `mines` L de índices 0..24, `revealed` L de índices, `version` N. Toda transición de una partida de minas incrementa `version`.
 
 **friomx-leaderboard** (PK `weekId` S)
@@ -185,7 +200,7 @@ Si falla la condición 1 → 409 EMAIL_IN_USE. Después se crea la suscripción 
 
 **Cambio de correo.** Si el correo nuevo normalizado es igual al actual se responde 200 sin cambios (una transacción no puede tocar dos veces el mismo ítem). Si no, `TransactWriteItems`: Delete user-emails viejo con `userId = :me`, Put nuevo con `attribute_not_exists(email)`, Update users `SET email`. Luego se crea la suscripción nueva y se intenta eliminar la anterior con `Unsubscribe` usando el ARN guardado. Cualquier error de `Unsubscribe` se registra y no hace fallar la petición. SNS no permite borrar una suscripción pendiente de confirmar, que desaparece sola a las 48 horas. Si alguien la confirma antes, recibe los avisos de ese jugador. Es una limitación aceptada.
 
-**Cambio de contraseña y de correo.** Ambos exigen `currentPassword` (403 WRONG_PASSWORD si no coincide). La contraseña se guarda con Update users `SET passwordHash, pwdChangedAt` (bcrypt, costo 10) y la respuesta trae un `token` nuevo. `requireAuth` rechaza los tokens con `iat` anterior a `pwdChangedAt`, así un token robado deja de servir al cambiar la contraseña. El nombre no admite `<` ni `>` y el frontend pinta todo dato del usuario con `textContent`. El login compara contra un hash fijo cuando el correo no existe, para que el tiempo de respuesta no revele qué correos están registrados. Se usa `bcryptjs`, que ya trae la base y es JavaScript puro, así el paquete armado en el runner de GitHub corre en Amazon Linux sin compilar nada nativo.
+**Cambio de contraseña y de correo.** Ambos exigen `currentPassword` (403 WRONG_PASSWORD si no coincide). La contraseña se guarda con Update users `SET passwordHash, tokenVersion = tokenVersion + 1` (bcrypt, costo 10), con condición sobre la versión leída, y la respuesta trae un `token` nuevo. El JWT lleva la versión en `tv` y `requireAuth` rechaza los tokens cuyo `tv` no coincide con `tokenVersion`, así un token robado deja de servir al cambiar la contraseña. El nombre no admite `<` ni `>` y el frontend pinta todo dato del usuario con `textContent`. El login compara contra un hash fijo cuando el correo no existe, para que el tiempo de respuesta no revele qué correos están registrados. Se usa `bcryptjs`, que ya trae la base y es JavaScript puro, así el paquete armado en el runner de GitHub corre en Amazon Linux sin compilar nada nativo.
 
 **Rondas con estado (hi-lo y minas).** El reparto de hi-lo y el `start` de minas cobran la apuesta (si fuera gratis, un jugador podría pedir cartas hasta que saliera una favorable). Cada usuario guarda un puntero a su ronda abierta de cada juego (`activeHiloId`/`activeHiloExp`, `activeMinesId`/`activeMinesExp`). Al abrir, `TransactWriteItems`:
 1. Update users `SET balance = balance - :bet, lastPlayedAt, <puntero> = :id, <exp> = :exp` con `balance >= :bet AND (attribute_not_exists(<puntero>) OR <exp> < :ahora)`. Si falla, se relee el usuario: con ronda viva → 409 ROUND_ACTIVE con su `gameId`; si no → 409 INSUFFICIENT_FUNDS.
@@ -228,9 +243,9 @@ Funciones puras, sin acceso a AWS, para probarlas con unidades. El aleatorio se 
 
 ### 5.1 Hi-lo
 
-- Carta: `rng(2, 13)` (valores 2 a 12; J = 11 y Q = 12 en pantalla). `oldCard` se genera en el reparto y `newCard` en la jugada.
+- Cartas: valores 2 a 12 (J = 11 y Q = 12 en pantalla). La carta visible (`oldCard`) se reparte con `rng(3, 12)`, de 3 a J, para que siempre se pueda elegir mayor y menor. La segunda (`newCard`) sale de `rng(2, 13)` en la jugada.
 - `higher` gana si `new > old`. `lower` gana si `new < old`. El empate pierde.
-- `k` = cantidad de valores que ganan: `12 - old` para `higher` y `old - 2` para `lower`. Si `k = 0` la predicción se rechaza con 400 y el navegador deshabilita ese botón.
+- `k` = cantidad de valores que ganan: `12 - old` para `higher` y `old - 2` para `lower`. Como la carta visible va de 3 a J, `k` nunca es 0. Si llegara a serlo, la predicción se rechaza con 400 como defensa.
 - Pago si gana: `floor(bet × 0.95 × 11 / k)`. El reparto envía por opción el multiplicador (`0.95 × 11 / k`, 2 decimales), la probabilidad (`k/11`) y el pago exacto con esa apuesta, para mostrarlos antes de elegir.
 - Motivo del cambio respecto a la base: ahí el empate gana y el multiplicador está entre 1.15 y 1.92 para cualquier carta, así que jugando bien el valor esperado es positivo con todas las cartas y hi-lo crearía fichas sin límite.
 
@@ -291,7 +306,7 @@ Variables de entorno, que el módulo `functions` pasa en `environment.variables`
 - `TransactWriteItems`: Put leaderboard con `attribute_not_exists(weekId)` y un Update users `ADD balance :prize` con `attribute_exists(userId)` por ganador (máximo 4 ítems). Si se cancela por el ítem 0 (ya existe) → la semana ya se cerró, termina sin hacer nada. Si se cancela por el ítem de un ganador (cuenta inexistente) → se quita a ese jugador del top y se reintenta.
 - Si no hay ganadores se guarda el leaderboard con `top = []` para que la semana quede cerrada.
 - Publish a cada ganador con `audience = userId`.
-- Para la demo se puede invocar a mano con `aws lambda invoke --function-name friomx-weekly-ranking --cli-binary-format raw-in-base64-out --payload '{"weekId":"<semana>"}' out.json` (la CLI v2 necesita `--cli-binary-format` para JSON en texto). Como cada semana se cierra una sola vez y la regla del lunes cierra sola la semana anterior, para repetir la prueba se elige una semana pasada que no esté cerrada (por ejemplo una de hace varias semanas), se corre `scripts/seed.js --week <semana>` y se invoca con esa semana.
+- Para la demo se puede invocar a mano con `aws lambda invoke --function-name friomx-weekly-ranking --cli-binary-format raw-in-base64-out --payload '{"weekId":"<semana>"}' out.json` (la CLI v2 necesita `--cli-binary-format` para JSON en texto). Como cada semana se cierra una sola vez y la regla del lunes cierra sola la semana anterior, para repetir la prueba se elige una semana pasada que no esté cerrada (por ejemplo una de hace varias semanas), se corre `scripts/seed.js --week <semana>` y se invoca con esa semana. `seed.js` rechaza la semana en curso y las que ya están cerradas.
 
 ### 6.4 Utilidades compartidas (`lib/time.js` y `lambdas/shared/time.js`)
 
@@ -307,19 +322,32 @@ Variables de entorno, que el módulo `functions` pasa en `environment.variables`
 
 - Amazon Linux 2023, `t3.small`, subred pública de la VPC por defecto, IP elástica, `LabInstanceProfile`, IMDSv2 obligatorio, disco gp3 de 16 GB.
 - Grupo de seguridad: entrada TCP 80 desde `0.0.0.0/0`. Sin puerto 22. Salida abierta.
-- `user_data` (solo en la primera creación): instala Node.js 22, nginx y el paquete del agente de CloudWatch, sin configurarlo. Crea el usuario `friomx` y los directorios `/var/log/friomx` (dueño `friomx`), `/opt/friomx/releases` y `/etc/friomx`. Registra dos servicios `systemd`, habilitados al arranque. `friomx-backend` usa `User=friomx`, `WorkingDirectory=/opt/friomx/current/backend`, `EnvironmentFile=/etc/friomx/backend.env` y `ExecStart=/usr/bin/node server.js`. `friomx-frontend` usa `User=friomx`, `WorkingDirectory=/opt/friomx/current/frontend` y `ExecStart=/usr/bin/node server.js`. El backend lee sus variables de `EnvironmentFile` y no de un `.env`, que no viene en el paquete. Los dos llevan `After=network-online.target`, `Wants=network-online.target`, `Restart=always`, `RestartSec=5` y `StartLimitIntervalSec=0`. Así, si al arrancar la red o el secreto todavía no responden, el servicio reintenta cada 5 s sin quedar en `failed`.
-- nginx:
+- `user_data` (solo en la primera creación, log en `/var/log/friomx-user-data.log`): instala Node.js 22, nginx, el paquete del agente de CloudWatch (sin configurarlo) y logrotate, con hasta 5 reintentos de `dnf`. Crea el usuario `friomx` y los directorios `/var/log/friomx` (dueño `friomx`), `/opt/friomx/releases` y `/etc/friomx`. Registra dos servicios `systemd`, habilitados al arranque. `friomx-backend` usa `User=friomx`, `WorkingDirectory=/opt/friomx/current/backend`, `EnvironmentFile=/etc/friomx/backend.env` y `ExecStart=/usr/bin/node server.js`. `friomx-frontend` usa `User=friomx`, `WorkingDirectory=/opt/friomx/current/frontend`, `PORT=8080`, `HOST=127.0.0.1` y `ExecStart=/usr/bin/node server.js`. El backend lee sus variables de `EnvironmentFile` y no de un `.env`, que no viene en el paquete. Los dos llevan `After=network-online.target`, `Wants=network-online.target`, `Restart=always`, `RestartSec=5` y `StartLimitIntervalSec=0`. Así, si al arrancar la red o el secreto todavía no responden, el servicio reintenta cada 5 s sin quedar en `failed`. Al final escribe la marca `user_data de FrioMx terminado`, que `deploy-on-instance.sh` revisa.
+- nginx (`/etc/nginx/conf.d/friomx.conf`, copiado de `infra/modules/compute/user_data.sh`):
 
 ```
 server {
-  listen 80;
+  listen 80 default_server;
+  server_name _;
   client_max_body_size 6m;
-  location /api/ { proxy_pass http://127.0.0.1:3000; proxy_set_header Host $host; proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for; }
-  location /     { proxy_pass http://127.0.0.1:8080; }
+
+  location /api/ {
+    proxy_pass http://127.0.0.1:3000;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+  }
+
+  location / {
+    proxy_pass http://127.0.0.1:8080;
+    proxy_set_header Host $host;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+  }
 }
 ```
 
-- El archivo de nginx va en `/etc/nginx/conf.d/friomx.conf`. El `user_data` quita el bloque `server` que trae por defecto `/etc/nginx/nginx.conf` de Amazon Linux 2023 para que no compita por el puerto 80, valida con `nginx -t` y habilita el servicio con `systemctl enable --now nginx` (en Amazon Linux 2023 instalarlo no lo arranca).
+- El `user_data` reemplaza completo `/etc/nginx/nginx.conf` de Amazon Linux 2023 (guarda el original en `nginx.conf.orig`) por uno sin el bloque `server` por defecto, que solo incluye `conf.d/*.conf`, así nada más compite por el puerto 80. Valida con `nginx -t` y habilita el servicio con `systemctl enable --now nginx` (en Amazon Linux 2023 instalarlo no lo arranca).
 - Express usa `app.set("trust proxy", 1)` para que el límite de intentos vea la IP real.
 - Un archivo de más de 6 MB lo rechaza nginx con 413 antes de llegar al backend. `profile.js` valida 5 MB antes de subir, así el jugador ve el mensaje propio en lugar del 413.
 - Los servicios escriben su salida en `/var/log/friomx/backend.log` y `frontend.log` (`StandardOutput=append:` en `systemd`), con rotación por `logrotate` usando `copytruncate`, porque `systemd` abre el archivo una sola vez y un renombrado dejaría al proceso escribiendo en el archivo viejo. La configuración del agente vive en el repositorio (`infra/cloudwatch-agent.json`) y, una vez que existe el monitoreo, `deploy-on-instance.sh` la aplica en cada despliegue con `amazon-cloudwatch-agent-ctl -a fetch-config -m ec2 -c file:<ruta> -s`. Así un cambio no depende del `user_data`. Los logs van a `/friomx/backend` y `/friomx/frontend` (14 días).
@@ -362,15 +390,25 @@ Dashboard `FrioMx`: las 5 métricas, CPU de EC2, `FrioMx/RechargesCompleted`, `B
 
 ## 13. Terraform
 
-- Terraform `>= 1.11` (bloqueo nativo en S3 estable), proveedor `hashicorp/aws ~> 5.0`.
+- Terraform `>= 1.11` (bloqueo nativo en S3 estable; CI y CD usan 1.16.5), proveedor `hashicorp/aws ~> 5.0`.
 - Backend: `backend "s3" {}` con `-backend-config=backend.hcl` (`bucket`, `key = "lab/terraform.tfstate"`, `region`, `use_lockfile = true`).
-- `data "aws_iam_role" "lab" { name = "LabRole" }` y `data "aws_iam_instance_profile" "lab" { name = "LabInstanceProfile" }`. Ningún módulo crea recursos IAM.
+- Learner Lab no permite leer IAM (`iam:GetRole`, `iam:GetInstanceProfile`), así que no hay data sources de IAM: el ARN del rol se arma con la cuenta de `aws_caller_identity` (`arn:aws:iam::<cuenta>:role/LabRole`) y la instancia usa el perfil por nombre (`LabInstanceProfile`). Los dos nombres son variables con ese valor por defecto. Ningún módulo crea recursos IAM.
+- Variables de `infra/envs/lab` (valores en `lab.tfvars`, que se copia de `lab.tfvars.example`):
+
+| Variable | Por defecto | Notas |
+|---|---|---|
+| `alert_emails` | (obligatoria) | correos del equipo para `friomx-ops-alerts`; no puede ir vacía ni con los `@example.com` del ejemplo |
+| `region` | us-east-1 | |
+| `instance_type` | t3.small | |
+| `lab_role_name` | LabRole | rol de las Lambdas |
+| `lab_instance_profile_name` | LabInstanceProfile | perfil de la instancia |
+
 - Módulos:
 
 | Módulo | Recursos |
 |---|---|
-| network | security group, `aws_eip` y asociación, datos de VPC y subred por defecto |
-| compute | `aws_instance` con `user_data`, `lifecycle.ignore_changes = [user_data, ami]` |
+| network | security group, `aws_eip`, datos de VPC y subred por defecto (una zona que ofrezca el tipo de instancia) |
+| compute | `data "aws_ami"` (Amazon Linux 2023 x86_64 más reciente de `amazon`, solo `ec2:DescribeImages`), `aws_instance` con `user_data`, `lifecycle.ignore_changes = [user_data, ami]`, asociación de la IP elástica |
 | data | 7 `aws_dynamodb_table` (TTL en game-rounds) |
 | storage | buckets de uploads y artefactos, bloqueo público, cifrado, ciclo de vida |
 | secrets | `random_password`, secreto y versión |
@@ -378,32 +416,35 @@ Dashboard `FrioMx`: las 5 métricas, CPU de EC2, `FrioMx/RechargesCompleted`, `B
 | functions | `archive_file` por Lambda, `aws_lambda_function` con `source_code_hash`, `aws_lambda_event_source_mapping`, `aws_cloudwatch_event_rule`/`target`, `aws_lambda_permission`, grupos de logs |
 | monitoring | alarmas y `aws_cloudwatch_dashboard` |
 
-- Salidas: IP elástica, id de instancia, nombres de tablas, URL de la cola, ARNs de temas y del secreto, buckets. El CD las lee con `terraform output -json`.
+- Salidas (`infra/envs/lab/outputs.tf`): `public_ip`, `instance_id`, `artifacts_bucket`, `uploads_bucket`, `recharge_queue_url`, `recharge_dlq_url`, `user_topic_arn`, `ops_topic_arn`, `jwt_secret_arn`, `aws_region`, `tables` (mapa `users`, `user_emails`, `activity`, `weekly_stats`, `recharges`, `game_rounds`, `leaderboard` → nombre) y `backend_env` (el contenido completo de `backend.env`, una línea `KEY=VALUE` por variable). `scripts/deploy.sh`, que también usa el CD, las lee una por una con `terraform output -raw <nombre>` y escribe `backend_env` tal cual.
 
 ## 14. Despliegue de la aplicación (`scripts/deploy-on-instance.sh`)
 
-`scripts/deploy.sh` arma `releases/<sha>.tgz` con `backend/` y `frontend/` (cada uno con `npm ci --omit=dev`), `scripts/deploy-on-instance.sh` y, si existe, `infra/cloudwatch-agent.json`. Lo sube a S3 junto con un `env` generado con las salidas de Terraform. Luego ejecuta `aws ssm send-command --document-name AWS-RunShellScript`, cuyos `commands` descargan el tgz con `aws s3 cp`, lo descomprimen en `/opt/friomx/releases/<sha>` y corren el `deploy-on-instance.sh` que viene dentro. El script en la instancia:
+`scripts/deploy.sh` arma `release.tgz` con `backend/` y `frontend/` (cada uno con `npm ci --omit=dev`, sin `node_modules`, `coverage`, `.env` ni `backend/test`), `scripts/deploy-on-instance.sh` y, si existe, `infra/cloudwatch-agent.json`. `<sha>` son los primeros 12 caracteres del commit (`GITHUB_SHA` en el CD), con sufijo `-dirty` si el árbol local tiene cambios. Sube `s3://<artifacts>/releases/<sha>/release.tgz` y `s3://<artifacts>/releases/<sha>/backend.env`, que es la salida `backend_env` de Terraform tal cual (falla si no trae `JWT_SECRET_ARN`). Espera hasta `SSM_WAIT` (300 s) a que la instancia esté `Online` en SSM y ejecuta `aws ssm send-command --document-name AWS-RunShellScript` con `executionTimeout` de 900 s. Sus `commands` descargan el tgz con `aws s3 cp`, lo descomprimen en `/opt/friomx/releases/<sha>-<timestamp UTC>` y corren `deploy-on-instance.sh <dir> <uri del backend.env> <region>`, que viene dentro. El script en la instancia (como root):
 
-1. Descarga el `env` de S3 (el tgz ya lo descomprimieron los `commands` del `send-command`).
-2. Copia el `env` a `/etc/friomx/backend.env` (permisos 600, dueño `friomx`).
-3. Si el paquete trae `infra/cloudwatch-agent.json`, aplica la configuración del agente de CloudWatch con `amazon-cloudwatch-agent-ctl -a fetch-config -m ec2 -c file:<versión>/infra/cloudwatch-agent.json -s`.
-4. Guarda el destino actual de `/opt/friomx/current` como previo y apunta el enlace a la versión nueva.
-5. `systemctl restart friomx-backend friomx-frontend`.
-6. Hasta 10 intentos de `curl -fs http://127.0.0.1/api/health` cada 3 s.
-7. Si falla, regresa el enlace a la versión previa, reinicia y termina con error para que el pipeline quede rojo.
-8. Conserva las últimas 3 versiones y borra las demás.
+1. Espera a que termine `cloud-init` (`cloud-init status --wait`) y verifica que el `user_data` terminó: la marca `user_data de FrioMx terminado` en `/var/log/friomx-user-data.log`, el usuario `friomx`, los dos units de `systemd` y `node`. Si falta algo, termina con error e indica reemplazar la instancia con `terraform apply -replace=module.compute.aws_instance.web`, porque el `user_data` no se vuelve a correr.
+2. Respalda el `/etc/friomx/backend.env` actual en `backend.env.prev`, descarga el nuevo de S3 y lo instala con permisos 600, dueño `friomx`.
+3. Deja el código de la versión con dueño root y solo lectura para `friomx`.
+4. Si el paquete trae `infra/cloudwatch-agent.json` y el agente está instalado, aplica su configuración con `amazon-cloudwatch-agent-ctl -a fetch-config -m ec2 -c file:<versión>/infra/cloudwatch-agent.json -s`. Si falla, lo registra y sigue.
+5. Guarda el destino actual de `/opt/friomx/current` como previo y apunta el enlace a la versión nueva (`ln -sfn` a un temporal y `mv -Tf`, atómico).
+6. `systemctl daemon-reload` y `systemctl restart friomx-backend friomx-frontend`.
+7. Hasta 10 intentos cada 3 s de `curl -fs http://127.0.0.1/api/health` (backend) y `http://127.0.0.1/login` (frontend), los dos a través de nginx.
+8. Si falla, imprime `journalctl` y los logs de los dos servicios, restaura el `backend.env` previo, regresa el enlace a la versión previa, reinicia y termina con error para que el pipeline quede rojo.
+9. Conserva las últimas 3 versiones (más la actual y la previa) y borra las demás.
+
+Al terminar con `Success`, `deploy.sh` repite la prueba de humo desde afuera contra `http://<public_ip>/api/health` y `http://<public_ip>/login` (12 intentos cada 5 s).
 
 ## 15. CI/CD
 
 `ci.yml`, en `pull_request` hacia `main`:
-- Jobs en paralelo: `backend` (Node 22, `npm ci`, `npm test -- --coverage`), `lambdas` (igual) y `terraform` (`hashicorp/setup-terraform` con versión fija 1.11.x, `fmt -check`, `init -backend=false`, `validate`). El job `deploy` del CD también usa `hashicorp/setup-terraform` con la misma versión.
+- Jobs en paralelo: `backend` (Node 22, `npm ci`, `npm test -- --coverage`), `lambdas` (igual) y `terraform` (`hashicorp/setup-terraform` con versión fija 1.16.5, `fmt -check`, `init -backend=false`, `validate`). El job `deploy` del CD también usa `hashicorp/setup-terraform` con la misma versión.
 - `backend/jest.config.js` define `collectCoverageFrom: ["src/**/*.js"]` y `lambdas/jest.config.js` define `["*/index.js", "shared/**/*.js", "!dist/**"]`. Los dos usan `coverageThreshold.global`, que arranca en 0 (al inicio casi todo el código importado no tiene pruebas y un umbral más alto bloquearía todos los PR), sube a 30 cuando los tres flujos tienen pruebas y a 70 en líneas, ramas, funciones y sentencias antes de la entrega final.
-- Protección de `main`: pull request obligatorio, 1 aprobación, los 3 jobs en verde.
+- Protección de `main`: pull request obligatorio, 1 aprobación, los 3 jobs en verde. Se configura en GitHub (Settings → Branches), no en el repositorio; hay que confirmar que esté activa.
 
 `cd.yml`, en `push` a `main`:
 - `concurrency: { group: deploy-lab, cancel-in-progress: false }`.
 - Job `test`: lo mismo que CI.
-- Job `deploy` (necesita `test`): credenciales con `aws-actions/configure-aws-credentials` usando `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` y `AWS_SESSION_TOKEN`. Escribe `backend.hcl` y `lab.tfvars` a partir de los secretos `TF_BACKEND_HCL` y `TF_LAB_TFVARS` (este último lleva `alert_emails`) y ejecuta `scripts/deploy.sh`, el mismo que se usa a mano. Ese script hace `lambdas/build.sh`, `terraform init -backend-config=backend.hcl`, `terraform apply -auto-approve -var-file=lab.tfvars`, empaquetado, subida a S3, `send-command`, espera del resultado con un ciclo propio de `aws ssm get-command-invocation` cada 5 s y tope de 5 minutos (tratando `InvocationDoesNotExist` como pendiente, porque los primeros segundos la invocación todavía no aparece; solo termina con `Success`, `Failed`, `Cancelled` o `TimedOut`), que imprime `StandardOutputContent` y `StandardErrorContent` (el waiter de la CLI se rinde a los 100 s), y prueba de humo `curl` a `http://<ip>/api/health`.
+- Job `deploy` (necesita `test`): credenciales con `aws-actions/configure-aws-credentials` usando `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` y `AWS_SESSION_TOKEN`. Escribe `backend.hcl` y `lab.tfvars` a partir de los secretos `TF_BACKEND_HCL` y `TF_LAB_TFVARS` (este último lleva `alert_emails`) y ejecuta `scripts/deploy.sh`, el mismo que se usa a mano. Ese script hace `lambdas/build.sh`, `terraform init -backend-config=backend.hcl`, `terraform apply -auto-approve -var-file=lab.tfvars`, empaquetado, subida a S3, `send-command`, espera del resultado con un ciclo propio de `aws ssm get-command-invocation` cada 5 s y tope de `DEPLOY_TIMEOUT` (900 s por defecto, porque el primer arranque espera a que termine el `user_data`; trata `InvocationDoesNotExist` como pendiente, porque los primeros segundos la invocación todavía no aparece, y solo termina con `Success`, `Failed`, `Cancelled` o `TimedOut`), que imprime `StandardOutputContent` y `StandardErrorContent` (el waiter de la CLI se rinde a los 100 s), y prueba de humo `curl` a `http://<ip>/api/health` (backend) y `http://<ip>/login` (frontend).
 
 `scripts/update-gh-secrets.sh` lee el bloque `[default]` de `~/.aws/credentials` (pegado desde "AWS Details" del lab) y corre `gh secret set` para las tres variables. Se ejecuta al iniciar cada sesión del lab. `TF_BACKEND_HCL` y `TF_LAB_TFVARS` se crean una sola vez con `gh secret set ... < archivo` a partir de `backend.hcl` y `lab.tfvars`, que se copian de los `.example` versionados. El README documenta los dos pasos.
 
@@ -436,6 +477,7 @@ Se reescribió sobre una capa compartida sin dependencias externas: no hay CDN (
 | Hi-lo | Apuesta y reparto; mayor y menor muestran multiplicador, pago aproximado y probabilidad; el resultado muestra las dos cartas. La ronda abierta se retoma al recargar (`/active`). |
 | Minas | Tablero de botones navegable con teclado, multiplicador actual y siguiente, botón Cobrar, modo bandera y cola de destapes que reintenta en 409 CONFLICT. La partida abierta se retoma al recargar. |
 | Historial | Juego, fecha, apuesta, resultado (GANADA, PERDIDA, IGUAL, EN CURSO) y neto con signo; "Ver más" con cursor y estado vacío. |
-| Perfil | Editar nombre; cambiar correo o contraseña pidiendo la actual (guarda el token nuevo). La foto queda deshabilitada hasta tener S3. |
-| Saldo | Paquetes de recarga deshabilitados hasta tener SQS y Lambda. |
+| Perfil | Editar nombre; cambiar correo o contraseña pidiendo la actual (guarda el token nuevo). Foto: subir, cambiar y quitar (con confirmación), JPG, PNG o WebP de hasta 5 MB validados antes de subir. `GET /profile/image` dice con `available` si la foto está activa; sin el campo, un 503 la marca como no disponible y los controles se deshabilitan con un aviso. Si la URL firmada ya venció o no carga, se ven las iniciales. |
+| Saldo | Paquetes desde `GET /wallet/packages`. Cada recarga manda `POST /wallet/recharges` con `Idempotency-Key` UUID v4 (un reintento del mismo paquete reusa la clave) y consulta el estado cada 2 s hasta 60 s. La recarga en curso se guarda en `sessionStorage` y se retoma al recargar la página; mientras siga sin confirmar no se puede pedir otro paquete y se ofrece "Revisar". Si el `POST` falló con 503, 5xx o sin red, la clave queda guardada sin `rechargeId` (la recarga pudo quedar `PENDING` en el servidor y ya gastó un cupo): los otros paquetes quedan deshabilitados y solo se ofrece "Intentar de nuevo" con el mismo paquete y la misma clave, también al volver a abrir la página. Mensajes para DAILY_LIMIT ("Ya usaste tus 3 recargas de hoy"), QUEUE_UNAVAILABLE (con reintento) y FAILED, que avisa que las fichas pueden llegar más tarde. |
+| Ranking | Semana en curso con el top 10, la fila propia resaltada ("Tú") y la posición del jugador. Debajo, selector de semanas cerradas (`/leaderboard/weeks`) con su top 3 y premios; la semana elegida se refleja en `?weekId=` y se respeta al abrir la página. |
 | Reglas y Acerca de | Públicas; con sesión muestran el menú de la app. |
