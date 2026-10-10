@@ -9,6 +9,7 @@ FrioMX/
   frontend/
     server.js               servidor Express: páginas, 404, cabeceras de seguridad y, solo en desarrollo, proxy de /api
     public/                 páginas HTML, assets/, styles/ y scripts/ (app.js, ui.js y un script por página)
+    e2e/                    pruebas de punta a punta con Playwright (`npm run e2e`, configuración en playwright.config.js)
   backend/
     server.js               carga el secreto y arranca la API
     jest.config.js
@@ -56,8 +57,13 @@ FrioMX/
     deploy.sh               build de Lambdas, terraform apply, empaquetado, subida a S3 y SSM (lo usan las personas y el CD)
     deploy-on-instance.sh   se ejecuta en EC2 vía SSM
     update-gh-secrets.sh    copia credenciales del lab a secretos de GitHub
+    resume-lab.sh           sesión nueva del lab: arranca la EC2 si está detenida, espera SSM y /api/health (`--gh-repo` renueva los secretos)
+    smoke.sh                prueba de punta a punta de los 3 flujos contra la nube (`--url`)
+    monitoring-check.sh     métricas, estado de las 2 alarmas y URL del dashboard (`--demo-alarms`, `--reset`)
+    destroy.sh              vacía los buckets y corre terraform destroy (`--yes`, `--keep-state`)
     seed.js                 jugadores y estadísticas de una semana pasada para probar el cierre del ranking (`--week <YYYY-Www>`, `--include-email <correo>`)
   .github/workflows/ci.yml, cd.yml
+  .github/CODEOWNERS, pull_request_template.md
   docs/
 ```
 

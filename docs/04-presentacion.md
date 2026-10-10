@@ -26,17 +26,25 @@ Se proyecta una sola máquina, la de quien tiene la cuenta del lab compartido. C
 | 8-10 | Antonio | App: Saldo | Recarga de 500. "Procesando tu recarga…" y luego "Listo". La API responde 202 y encola; la Lambda `friomx-recharge-worker` acredita. Correo "FrioMx: recarga lista". Mencionar límite de 3 por día e idempotencia (doble clic no acredita dos veces). |
 | 10-11 | Antonio | Consola SQS y Lambda | Cola `friomx-recharges` con DLQ tras 3 intentos, concurrencia máxima 2. Logs de la invocación en CloudWatch. |
 | 11-13 | Antonio | GitHub Actions | CI en verde (4 jobs: backend con DynamoDB Local, Lambdas, e2e con Playwright y Terraform). Merge del PR. Arranca el CD: pruebas, `terraform apply`, paquete a S3, despliegue por SSM sin SSH, prueba de salud y regreso automático a la versión previa si falla. Se deja corriendo. Cede a Alan. |
-| 13-15 | Alan | App: Ranking y terminal | Ranking de la semana en curso con la fila propia. Invoca `friomx-daily-bonus` (bono de 100 a quien jugó en 7 días) y `friomx-weekly-ranking` con la semana sembrada (§3). Muestra `"status":"CLOSED"`, el top 3 en "Semanas cerradas" y el correo del premio. |
+| 13-15 | Alan | App: Ranking y terminal | Primero corre `bash scripts/monitoring-check.sh --demo-alarms` en la terminal proyectada (§5) y lo explica en una frase. Luego, ranking de la semana en curso con la fila propia. Invoca `friomx-daily-bonus` (bono de 100 a quien jugó en 7 días) y `friomx-weekly-ranking` con la semana sembrada en el paso 8 de §3 (comandos abajo de esta tabla). Muestra `"status":"CLOSED"`, el top 3 en "Semanas cerradas" y el correo del premio. |
 | 15-16 | Alan | Consola EventBridge | Reglas `cron(0 14 * * ? *)` y `cron(10 7 ? * MON *)`: 08:00 y lunes 01:10 en Ciudad de México. Sin servidor encendido esperando. Un cierre repetido no paga dos veces. |
-| 16-18 | Alan | Dashboard `FrioMx` y alarmas | Las 5 métricas y las de apoyo. Alarmas `friomx-recharge-dlq` y `friomx-api-5xx` en ALARM (disparadas en el minuto 9, §5) y el correo en la bandeja del equipo. |
+| 16-18 | Alan | Dashboard `FrioMx` y alarmas | Las 5 métricas y las de apoyo. Alarmas `friomx-recharge-dlq` y `friomx-api-5xx` en ALARM (disparadas en el minuto 13, §5) y el correo en la bandeja del equipo. Si `friomx-api-5xx` ya regresó a OK, se muestra su historial ALARM → OK y el correo de recuperación. |
 | 18-19 | Antonio | App y GitHub Actions | CD en verde. Se recarga la app y se ve el cambio del PR en producción. |
 | 19-20 | Emilio | Diagrama | Cierre: qué se cumplió y limitaciones aceptadas (sin HTTPS, una instancia). Preguntas. |
+
+Comandos de Alan en los minutos 13 a 15 (`$WEEK` es la semana sembrada en el paso 8 de §3). Sin `weekId`, el cierre toma la semana anterior, que `smoke.sh` ya cerró, y respondería `ALREADY_CLOSED`:
+
+```
+aws lambda invoke --function-name friomx-daily-bonus --cli-binary-format raw-in-base64-out --payload '{}' bonus.json && cat bonus.json
+aws lambda invoke --function-name friomx-weekly-ranking \
+  --cli-binary-format raw-in-base64-out --payload "{\"weekId\":\"$WEEK\"}" ranking.json && cat ranking.json
+```
 
 ## 3. Preparación (1 hora antes)
 
 1. Start Lab en AWS Academy y pegar las credenciales en `~/.aws/credentials`.
 2. `bash scripts/resume-lab.sh --gh-repo antoniopelayo1902/FrioMX`. Debe terminar con la URL y `/api/health` en OK. Esto también renueva los secretos del CD.
-3. `bash scripts/smoke.sh`. Todos los pasos en PASS. Ojo: invoca de verdad `weekly-ranking`, que cierra y paga la semana anterior si no estaba cerrada, y deja una cuenta `smoke-…@friomx.test`; la demo usa otra semana sembrada (§3), así que no choca. Si uno falla, se arregla ahora, no en la demo.
+3. `bash scripts/smoke.sh`. Todos los pasos en PASS. Ojo: invoca de verdad `weekly-ranking`, que cierra y paga la semana anterior si no estaba cerrada, y deja una cuenta `smoke-…@friomx.test`; la demo usa otra semana sembrada (paso 8), así que no choca. Si uno falla, se arregla ahora, no en la demo.
 4. Calentar la DLQ: `bash scripts/monitoring-check.sh --demo-alarms`, esperar a que `friomx-recharge-dlq` pase a ALARM (hasta 15 min si la cola llevaba más de 6 h sin actividad, porque SQS deja de publicar sus métricas) y luego `bash scripts/monitoring-check.sh --reset`. Así en la demo la alarma reacciona en uno o dos minutos.
 5. `bash scripts/monitoring-check.sh`. Las 6 métricas propias aparecen y las 2 alarmas están en OK. Si alguna sigue en ALARM de una prueba anterior, `bash scripts/monitoring-check.sh --reset` y esperar a que regrese a OK.
 6. Confirmar en la bandeja de los tres que la suscripción a `friomx-ops-alerts` está confirmada (en la consola de SNS no debe decir `PendingConfirmation`) y revisar spam.
@@ -49,7 +57,7 @@ Se proyecta una sola máquina, la de quien tiene la cuenta del lab compartido. C
    ```
    Si `seed.js` dice que la semana está cerrada, usar `-v-28d`.
 9. Preparar el PR de la demo (§4) en una rama, sin abrirlo todavía.
-10. Dejar escritos en la terminal los comandos de los minutos 9 y 13 a 15.
+10. Dejar escritos en la terminal los comandos de los minutos 13 a 15 (§2, abajo de la tabla, y §5).
 11. Comprobar que la sesión del lab tiene al menos 2 horas restantes.
 
 ## 4. CI/CD en vivo
@@ -68,13 +76,13 @@ En el minuto 7 se abre el PR. El CI tarda unos minutos; mientras, Antonio muestr
 
 ## 5. Alarmas en vivo
 
-En el minuto 9, Antonio corre en una terminal aparte de su máquina (la que tiene las credenciales del lab y `infra/envs/lab/backend.hcl`), sin proyectar:
+En el minuto 13, al empezar su parte, Alan corre en la terminal proyectada (la máquina de Antonio, que tiene las credenciales del lab y `infra/envs/lab/backend.hcl`):
 
 ```
 bash scripts/monitoring-check.sh --demo-alarms
 ```
 
-Manda un mensaje de prueba directo a la DLQ y publica `Api5xx=5` con `put-metric-data`, la misma métrica que emite el backend; no se generan errores reales en la API. Si el profesor pregunta, se dice así: es una prueba controlada del umbral. `friomx-recharge-dlq` pasa a ALARM en uno o dos minutos (la DLQ se calentó en la preparación, paso 4) y `friomx-api-5xx` en uno a cinco (periodo de 5 minutos); por eso se dispara en el minuto 9 y se muestra en el 16. Al terminar la presentación:
+Manda un mensaje de prueba directo a la DLQ y publica `Api5xx=5` con `put-metric-data`, la misma métrica que emite el backend; no se generan errores reales en la API. Se dice así en voz alta: es una prueba controlada del umbral. `friomx-recharge-dlq` pasa a ALARM en uno o dos minutos (la DLQ se calentó en la preparación, paso 4) y se queda así hasta el `--reset`, porque el mensaje sigue en la cola. `friomx-api-5xx` pasa a ALARM en uno a cinco minutos y regresa sola a OK cuando el periodo de 5 minutos ya no incluye ese dato; por eso se dispara en el 13 y se muestra entre el 16 y el 18. Si ya volvió a OK, también sirve: se muestra el cambio ALARM → OK en su historial y el correo de recuperación. Al terminar la presentación:
 
 ```
 bash scripts/monitoring-check.sh --reset
