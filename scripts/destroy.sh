@@ -58,7 +58,7 @@ fi
 # Borra todas las versiones y marcas de borrado de un bucket. --no-paginate trae una sola página
 # de la API (máximo 1000 llaves entre versiones y marcas), el límite de delete-objects.
 empty_bucket() {
-  local bucket="$1" region="$2" batch count
+  local bucket="$1" region="$2" batch count errors
   if ! aws s3api head-bucket --bucket "${bucket}" --region "${region}" >/dev/null 2>&1; then
     log "El bucket ${bucket} no existe, se omite"
     return 0
@@ -70,7 +70,10 @@ empty_bucket() {
     count="$(node -e 'const o=JSON.parse(process.argv[1]);process.stdout.write(String((o.Objects||[]).length))' "${batch}")"
     ((count > 0)) || break
     batch="$(node -e 'const o=JSON.parse(process.argv[1]);process.stdout.write(JSON.stringify({Objects:o.Objects,Quiet:true}))' "${batch}")"
-    aws s3api delete-objects --bucket "${bucket}" --region "${region}" --delete "${batch}" >/dev/null
+    errors="$(aws s3api delete-objects --bucket "${bucket}" --region "${region}" --delete "${batch}" \
+      --query 'length(Errors || `[]`)' --output text)"
+    # Con Quiet la API responde 200 aunque fallen llaves; sin este corte el ciclo no terminaría.
+    [[ "${errors}" == "0" ]] || die "no se pudieron borrar ${errors} objeto(s) de s3://${bucket} (¿permisos?)"
     log "  ${count} objeto(s) borrados"
   done
 }

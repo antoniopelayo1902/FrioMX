@@ -425,7 +425,9 @@ dato: sin tráfico no se ve, y por eso conviene correr antes `smoke.sh`.
   namespace `FrioMx` con `put-metric-data`, la misma métrica que emite el
   backend. No genera errores reales en la API ni toca datos de jugadores. Los
   correos llegan a `alert_emails` si confirmaron la suscripción (paso 4).
-  `friomx-recharge-dlq` cambia en uno o dos minutos y `friomx-api-5xx` en uno
+  `friomx-recharge-dlq` cambia en uno o dos minutos si la DLQ tuvo actividad en
+  las últimas 6 horas; si no, SQS puede tardar hasta unos 15 minutos en volver a
+  publicar sus métricas. `friomx-api-5xx` cambia en uno
   a cinco (periodo de 5 minutos).
 - `--reset` regresa todo a normal: purga la DLQ. Las alarmas vuelven a `OK`
   solas cuando la métrica baja del umbral.

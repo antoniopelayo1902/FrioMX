@@ -5,7 +5,9 @@
 # Uso: scripts/monitoring-check.sh [--demo-alarms] [--reset]
 #   --demo-alarms  dispara las dos alarmas de verdad, sin tocar datos de jugadores:
 #                  * friomx-recharge-dlq: manda 1 mensaje de prueba directo a la DLQ (nadie la
-#                    consume, así que no se acredita nada). Pasa a ALARM en ~1-2 min.
+#                    consume, así que no se acredita nada). Pasa a ALARM en ~1-2 min si la DLQ
+#                    tuvo actividad en las últimas 6 h; si no, SQS tarda hasta ~15 min en volver a
+#                    publicar sus métricas (por eso el guion la calienta en la preparación).
 #                  * friomx-api-5xx: publica Api5xx=5 en FrioMx con put-metric-data, la misma
 #                    métrica sin dimensiones que emite el backend; la alarma la evalúa igual que
 #                    a un error real (umbral 5 en 5 min). Pasa a ALARM en ~1-5 min.

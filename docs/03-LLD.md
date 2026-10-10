@@ -437,7 +437,7 @@ Al terminar con `Success`, `deploy.sh` repite la prueba de humo desde afuera con
 ## 15. CI/CD
 
 `ci.yml`, en `pull_request` hacia `main`:
-- Jobs en paralelo: `backend` (Node 22, `npm ci`, `npm test -- --coverage`), `lambdas` (igual) y `terraform` (`hashicorp/setup-terraform` con versión fija 1.16.5, `fmt -check`, `init -backend=false`, `validate`). El job `deploy` del CD también usa `hashicorp/setup-terraform` con la misma versión.
+- Jobs en paralelo: `backend` (Node 22, `npm ci`, `npm test -- --coverage`), `lambdas` (igual), `e2e` (Playwright en Chromium contra backend, frontend y DynamoDB Local levantados en el runner; si falla sube el reporte como artefacto) y `terraform` (`hashicorp/setup-terraform` con versión fija 1.16.5, `fmt -check`, `init -backend=false`, `validate`). El job `deploy` del CD también usa `hashicorp/setup-terraform` con la misma versión.
 - `backend/jest.config.js` define `collectCoverageFrom: ["src/**/*.js"]` y `lambdas/jest.config.js` define `["*/index.js", "shared/**/*.js", "!dist/**"]`. Los dos usan `coverageThreshold.global` con 70 en líneas, ramas, funciones y sentencias (RNF-09); empezó en 0 y se subió cuando los tres flujos tuvieron pruebas. El job `backend` levanta `amazon/dynamodb-local` como servicio y exporta `DDB_ENDPOINT=http://localhost:8000`: sin él las pruebas de API se saltan, la cobertura baja de 70 y el job falla.
 - Protección de `main` (ruleset de GitHub "main protegida"): nadie hace push directo, todo entra por pull request, se requiere la aprobación del dueño del código (`.github/CODEOWNERS`) y no se permite force push ni borrar la rama. El CI corre en cada PR con 4 jobs (`backend`, `lambdas`, `e2e`, `terraform`).
 
