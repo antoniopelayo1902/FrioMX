@@ -104,6 +104,18 @@ máquina. Se usan tres terminales, una por proceso:
    Copia el valor que imprime el último comando en `JWT_SECRET=` dentro de
    `backend/.env`. El `.env` no se sube al repo.
 
+   **Es lo único que hay que llenar.** Todo lo demás del `.env` ya trae el
+   valor correcto para local:
+   - `PORT`, `AWS_REGION`, `DDB_ENDPOINT`, las `TABLE_*` y `APP_TZ`: déjalos
+     como vienen.
+   - `UPLOADS_BUCKET`, `RECHARGE_QUEUE_URL` y `USER_TOPIC_ARN`: déjalos
+     **vacíos**. Son de AWS. Sin ellos, fotos y recargas avisan que no están
+     disponibles, pero la app no truena.
+   - `METRICS_ENABLED=false`: déjalo así.
+   - El frontend no lleva `.env`.
+   - En AWS no se usa este archivo. `deploy.sh` genera la configuración de
+     la EC2 con los valores reales que saca de Terraform.
+
 ### Cada vez que quieras levantarla
 
 1. **Terminal 1, DynamoDB Local:**
