@@ -87,7 +87,18 @@
         CONFLICT: 'Otra acción llegó al mismo tiempo. Intenta de nuevo.',
         INTERNAL: 'Algo salió mal en el servidor. Intenta de nuevo en un momento.',
         NOT_AVAILABLE: 'Esta función estará disponible pronto.',
+        QUEUE_UNAVAILABLE: 'Las recargas no están disponibles por ahora. Intenta más tarde.',
+        DAILY_LIMIT: 'Ya usaste tus 3 recargas de hoy. Vuelve mañana.',
     };
+
+    // UUID v4 con crypto.getRandomValues: crypto.randomUUID solo existe en HTTPS y la app va por HTTP.
+    function uuidv4() {
+        const b = crypto.getRandomValues(new Uint8Array(16));
+        b[6] = (b[6] & 0x0f) | 0x40;
+        b[8] = (b[8] & 0x3f) | 0x80;
+        const h = [...b].map((x) => x.toString(16).padStart(2, '0')).join('');
+        return `${h.slice(0, 8)}-${h.slice(8, 12)}-${h.slice(12, 16)}-${h.slice(16, 20)}-${h.slice(20)}`;
+    }
 
     class ApiError extends Error {
         constructor(status, code, message, body) {
@@ -98,14 +109,17 @@
         }
     }
 
-    async function api(path, { method = 'GET', body, auth = true } = {}) {
-        const headers = {};
-        if (body !== undefined) headers['Content-Type'] = 'application/json';
+    // body puede ser un objeto (se manda como JSON) o un FormData (el navegador pone el Content-Type con su boundary).
+    async function api(path, { method = 'GET', body, auth = true, headers: extra } = {}) {
+        const isForm = typeof FormData !== 'undefined' && body instanceof FormData;
+        const headers = { ...(extra || {}) };
+        if (body !== undefined && !isForm) headers['Content-Type'] = 'application/json';
         const token = getToken();
         if (auth && token) headers.Authorization = `Bearer ${token}`;
         let res;
         try {
-            res = await fetch('/api' + path, { method, headers, body: body === undefined ? undefined : JSON.stringify(body) });
+            const payload = body === undefined ? undefined : isForm ? body : JSON.stringify(body);
+            res = await fetch('/api' + path, { method, headers, body: payload });
         } catch {
             throw new ApiError(0, 'NETWORK', 'No hay conexión con el servidor. Revisa tu internet e intenta de nuevo.');
         }
@@ -205,6 +219,8 @@
     const listeners = new Set();
     function onBalance(fn) { listeners.add(fn); if (currentBalance !== null) fn(currentBalance); }
     function setBalance(n, { animate = true } = {}) {
+        // El servidor manda null si no pudo leer el saldo después de una jugada: se vuelve a pedir.
+        if (!Number.isFinite(n)) { refreshBalance().catch(() => {}); return; }
         const prev = currentBalance;
         currentBalance = n;
         document.querySelectorAll('[data-balance]').forEach((node) => { node.textContent = num(n); });
@@ -232,7 +248,8 @@
             me = await api('/user/profile');
             setBalance(me.balance, { animate: false });
             document.querySelectorAll('[data-user-name]').forEach((n) => { n.textContent = me.name; });
-            document.querySelectorAll('[data-user-initial]').forEach((n) => { n.textContent = initials(me.name); });
+            photoUrl = me.profileImageUrl || null;
+            paintAvatars(me.name);
             return me;
         })().finally(() => { mePending = null; });
         return mePending;
@@ -240,6 +257,24 @@
     function initials(name) {
         return (name || '?').trim().split(/\s+/).slice(0, 2).map((w) => w[0]).join('').toUpperCase();
     }
+    // Avatares: la foto de perfil si hay (URL firmada de S3) o las iniciales del nombre.
+    let photoUrl = null;
+    function paintAvatars(name = me && me.name) {
+        document.querySelectorAll('[data-user-initial]').forEach((n) => {
+            n.classList.toggle('has-photo', Boolean(photoUrl));
+            if (!photoUrl) { n.textContent = initials(name); return; }
+            const img = el('img', { src: photoUrl, alt: '' });
+            // Si la URL ya venció o no carga, se regresa a las iniciales.
+            img.addEventListener('error', () => { if (photoUrl === img.getAttribute('src')) { photoUrl = null; paintAvatars(name); } });
+            n.replaceChildren(img);
+        });
+    }
+    function setPhoto(url) {
+        photoUrl = url || null;
+        if (me) me.profileImageUrl = photoUrl;
+        paintAvatars();
+    }
+    function getPhoto() { return photoUrl; }
 
     async function logout({ ask = true } = {}) {
         if (ask && !(await dialog({ title: '¿Cerrar sesión?', text: 'Tendrás que volver a ingresar tu correo y contraseña.', confirmText: 'Cerrar sesión', danger: true }))) return;
@@ -255,6 +290,7 @@
         mines: 'M11 21a7 7 0 1 0 0-14 7 7 0 0 0 0 14m4.5-12.5 2-2M17 4l1.5-1.5M19 6.5l1.5-.5M8 13.5a3 3 0 0 1 3-3',
         activity: 'M12 8v4l3 2M12 3a9 9 0 1 0 9 9',
         balance: 'M3 7a2 2 0 0 1 2-2h13v4M3 7v10a2 2 0 0 0 2 2h15V9H5a2 2 0 0 1-2-2m14 7h.01',
+        ranking: 'M8 21h8m-4-4v4M7 4h10v5a5 5 0 0 1-10 0zM7 6H4v1a3 3 0 0 0 3 3m10-4h3v1a3 3 0 0 1-3 3',
         profile: 'M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8m-7 9a7 7 0 0 1 14 0',
         rules: 'M5 4h11a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3zM8 8h7M8 12h7',
         info: 'M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20m0 9v6m0-10h.01',
@@ -281,6 +317,7 @@
         { id: 'roulette', href: '/roulette', label: 'Ruleta', icon: 'roulette' },
         { id: 'hilo', href: '/hi-lo', label: 'Hi-Lo', icon: 'hilo' },
         { id: 'mines', href: '/mines', label: 'Minas', icon: 'mines' },
+        { id: 'ranking', href: '/ranking', label: 'Ranking', icon: 'ranking' },
         { section: 'Mi cuenta' },
         { id: 'activity', href: '/activity', label: 'Historial', icon: 'activity' },
         { id: 'balance', href: '/balance', label: 'Saldo', icon: 'balance' },
@@ -289,7 +326,7 @@
         { id: 'rules', href: '/rules', label: 'Reglas', icon: 'rules' },
         { id: 'info', href: '/info', label: 'Acerca de', icon: 'info' },
     ];
-    const BOTTOM = ['lobby', 'activity', 'balance', 'rules', 'profile'];
+    const BOTTOM = ['lobby', 'ranking', 'activity', 'balance', 'rules', 'profile'];
 
     function buildShell() {
         const page = root.dataset.page;
@@ -406,6 +443,7 @@
         api, ApiError, toast, clearToasts, dialog, chips, num, date, el, icon,
         getToken, setToken, clearSession, logout,
         setBalance, getBalance, refreshBalance, onBalance, loadMe, me: () => me, initials,
+        setPhoto, getPhoto, paintAvatars, uuidv4,
         betControl, safeNext, LOBBY, LOGIN,
     };
 })();

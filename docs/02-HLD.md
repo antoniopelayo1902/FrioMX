@@ -8,7 +8,7 @@ FrioMx corre en una sola instancia EC2 que sirve el frontend y el backend detrá
 
 ## 2. Contexto
 
-La aplicación base ya resuelve la experiencia de juego: páginas web, API REST con autenticación por token y la mecánica de los tres juegos. Para este proyecto se le agregan tres cosas. Primero, una capa de datos en DynamoDB que sustituya a MongoDB y la infraestructura de AWS de FrioMx. Segundo, los flujos asíncronos y programados. Tercero, el endurecimiento de reglas que hoy dependen del cliente. Hoy el cliente manda su propio id de usuario, existe una ruta que suma cualquier monto al saldo, el juego de minas lo decide el navegador, en hi-lo la carta que ve el jugador no es la que compara el servidor y los pagos de hi-lo le dan al jugador valor esperado positivo, lo que inflaría el ranking. El diseño cierra esas brechas como parte de la migración.
+La aplicación base aporta la experiencia de juego: páginas web, API REST con autenticación por token y la mecánica de los tres juegos. FrioMx incluye además tres cosas. Primero, una capa de datos en DynamoDB en lugar de MongoDB y la infraestructura de AWS. Segundo, los flujos asíncronos y programados. Tercero, el endurecimiento de reglas que en la base dependían del cliente: el cliente mandaba su propio id de usuario, existía una ruta que sumaba cualquier monto al saldo, el juego de minas lo decidía el navegador, en hi-lo la carta que veía el jugador no era la que comparaba el servidor y los pagos de hi-lo le daban al jugador valor esperado positivo, lo que habría inflado el ranking. Esas brechas se cerraron: el usuario sale solo del token, la ruta de saldo ya no existe, minas y hi-lo se resuelven en el servidor y hi-lo paga con ventaja de la casa.
 
 ## 3. Arquitectura
 
@@ -72,7 +72,7 @@ flowchart LR
 
 **nginx en EC2.** Recibe todo el tráfico en el puerto 80. Manda `/api/*` al backend y el resto al frontend. Así el navegador habla con un solo origen y no se necesita CORS.
 
-**Frontend.** El servidor Express de la base, que entrega HTML, CSS y JavaScript estáticos. Las páginas de juego se mantienen. Cambian las llamadas a la API, la página de saldo (recargas en lugar de pagos) y minas. Se agrega una página de ranking.
+**Frontend.** Servidor Express (`frontend/server.js`) que entrega HTML, CSS y JavaScript estáticos, con rutas de páginas, 404 propio y cabeceras de seguridad (CSP solo del mismo origen, `nosniff`, `X-Frame-Options`). Las páginas usan una capa compartida sin dependencias externas: `styles/app.css` y `scripts/app.js` (guardia de sesión, cliente de la API, avisos y control de apuesta). Incluye inicio, login, registro, lobby, ruleta, hi-lo, minas, historial, perfil con foto, saldo con recargas y ranking. Detalle en el LLD §17.
 
 **Backend API.** Express con Node.js 22. Valida la entrada, verifica el token, ejecuta la lógica de juego y escribe en DynamoDB con transacciones. Publica la solicitud de recarga en SQS y crea la suscripción de correo del jugador en SNS. Envía métricas propias a CloudWatch.
 
@@ -112,7 +112,7 @@ flowchart LR
 | game-rounds | gameId | rondas abiertas de hi-lo (carta visible) y minas (tablero oculto, casillas destapadas), estado, expiran en 1 hora |
 | leaderboard | semana | top 3 cerrado y premios |
 
-No hay datos que migrar desde la base anterior. Se arranca con tablas vacías y un script de datos de prueba.
+No hay datos que importar. Se arranca con tablas vacías y un script de datos de prueba (`scripts/seed.js`).
 
 ## 7. Seguridad
 
@@ -131,7 +131,7 @@ Las 5 métricas son: partidas jugadas por juego, latencia p95 de la API, errores
 
 ## 9. CI/CD
 
-Se trabaja en ramas `feature/*` con pull request a `main` y al menos una revisión. El CI corre en cada pull request: instala dependencias, corre pruebas con un umbral de cobertura que empieza en 0 y sube por etapas hasta 70% antes de la sesión del 12 de noviembre, `terraform fmt` y `terraform validate`. Al hacer merge, el CD repite las pruebas, aplica Terraform, empaqueta backend y frontend, sube el paquete a S3 y ordena a la instancia por SSM descargarlo, cambiar de versión y reiniciar. Si la verificación de salud falla, la instancia regresa a la versión anterior. Las credenciales del lab viven como secretos de GitHub y se renuevan en cada sesión con un script. Antes de que el CD esté listo se despliega con un script que hace los mismos pasos y se ejecuta a mano.
+Se trabaja en ramas `feature/*` con pull request a `main` y al menos una revisión. El CI corre en cada pull request: instala dependencias, corre pruebas con un umbral de cobertura que empieza en 0 y sube por etapas hasta 70% antes de la sesión del 12 de noviembre, `terraform fmt` y `terraform validate`. Al hacer merge, el CD repite las pruebas, aplica Terraform, empaqueta backend y frontend, sube el paquete a S3 y ordena a la instancia por SSM descargarlo, cambiar de versión y reiniciar. Si la verificación de salud falla, la instancia regresa a la versión anterior. Las credenciales del lab viven como secretos de GitHub y se renuevan en cada sesión con un script. El CD (`.github/workflows/cd.yml`) y el despliegue a mano usan el mismo script, `scripts/deploy.sh`.
 
 ## 10. Decisiones técnicas
 
@@ -156,4 +156,4 @@ Se trabaja en ramas `feature/*` con pull request a `main` y al menos una revisi�
 | Un jugador no confirma el correo de SNS | El resultado del flujo 2 también es visible en la aplicación (estado y saldo). |
 | Concurrencia de Lambda limitada en el lab | Concurrencia máxima de 2 en el consumidor de la cola. Las Lambdas programadas corren una vez. |
 | Una sola instancia es punto único de falla | Aceptado para el alcance escolar. Recuperación con `terraform apply` y despliegue desde el pipeline. |
-| Plazo corto a Fase 2 | Plan por prioridades: lo indispensable para el 80% primero, minas del lado del servidor y monitoreo después. |
+| Plazo corto a Fase 2 | Plan por prioridades. Minas del lado del servidor, ranking, CD y monitoreo (dashboard y 2 alarmas en Terraform) ya están hechos. Falta subir la cobertura a 70%, verificar el monitoreo en la nube y activar la protección de `main` con los checks del CI (o confirmar que ya está activa). |

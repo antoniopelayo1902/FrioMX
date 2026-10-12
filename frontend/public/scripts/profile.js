@@ -1,4 +1,4 @@
-// FrioMx: perfil (nombre, correo y contraseña).
+// FrioMx: perfil (foto, nombre, correo y contraseña).
 (function () {
     'use strict';
     const F = window.FrioMx;
@@ -10,7 +10,8 @@
     function apply(p) {
         profile = p;
         document.querySelectorAll('[data-user-name]').forEach((n) => { n.textContent = p.name; });
-        document.querySelectorAll('[data-user-initial]').forEach((n) => { n.textContent = F.initials(p.name); });
+        if (p.profileImageUrl !== undefined) F.setPhoto(p.profileImageUrl);
+        F.paintAvatars(p.name);
         $('side-email').textContent = p.email;
         $('side-age').textContent = `${p.age} años`;
         if (typeof p.balance === 'number') F.setBalance(p.balance, { animate: false });
@@ -113,6 +114,94 @@
         }
     });
 
+    // ---------- Foto de perfil ----------
+    const photoInput = $('photo-input');
+    const photoPick = $('photo-pick');
+    const photoRemove = $('photo-remove');
+    const photoMsg = $('photo-msg');
+    const PHOTO_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+    const PHOTO_MAX = 5 * 1024 * 1024;
+    let photoAvailable = false;
+
+    function photoNote(text, kind = '') {
+        photoMsg.textContent = text;
+        photoMsg.className = `photo-msg ${kind}`;
+    }
+    function refreshPhotoBtns() {
+        photoPick.disabled = !photoAvailable;
+        photoRemove.hidden = !photoAvailable || !F.getPhoto();
+        photoPick.textContent = F.getPhoto() ? 'Cambiar foto' : 'Subir foto';
+    }
+    function photoUnavailable() {
+        photoAvailable = false;
+        refreshPhotoBtns();
+        $('photo-hint').hidden = true;
+        photoNote('La foto de perfil estará disponible pronto.', 'muted');
+    }
+    // GET /profile/image dice si la foto está activa (`available`). Si el campo no viene,
+    // un 503 significa no disponible; con cualquier otra respuesta se deja subir y la subida decide.
+    async function loadPhoto() {
+        let data = null;
+        try {
+            data = await F.api('/profile/image');
+        } catch (err) {
+            if (err.status === 401) return;
+            if (err.status === 503 || err.code === 'NOT_AVAILABLE') { photoUnavailable(); return; }
+        }
+        if (data && data.available === false) { photoUnavailable(); return; }
+        if (data && data.profileImage) F.setPhoto(data.profileImage);
+        photoAvailable = true;
+        refreshPhotoBtns();
+    }
+
+    photoPick.addEventListener('click', () => { photoNote(''); photoInput.click(); });
+    photoInput.addEventListener('change', async () => {
+        const file = photoInput.files && photoInput.files[0];
+        photoInput.value = '';
+        if (!file) return;
+        if (!PHOTO_TYPES.includes(file.type)) { photoNote('Elige una imagen JPG, PNG o WebP.', 'lose'); return; }
+        if (file.size > PHOTO_MAX) { photoNote('La foto pesa más de 5 MB. Elige una más ligera.', 'lose'); return; }
+        const form = new FormData();
+        form.append('profileImage', file);
+        UI.busy(photoPick, true, 'Subiendo…');
+        photoRemove.disabled = true;
+        try {
+            const data = await F.api('/profile/upload', { method: 'POST', body: form });
+            UI.busy(photoPick, false);
+            F.setPhoto(data.profileImage);
+            photoNote('');
+            F.toast('Foto actualizada.', 'success');
+        } catch (err) {
+            UI.busy(photoPick, false);
+            if (err.status === 401) return;
+            if (err.code === 'NOT_AVAILABLE') { photoUnavailable(); return; }
+            photoNote(err.message, 'lose');
+        } finally {
+            photoRemove.disabled = false;
+            if (photoAvailable) refreshPhotoBtns();
+        }
+    });
+    photoRemove.addEventListener('click', async () => {
+        const ok = await F.dialog({ title: '¿Quitar tu foto?', text: 'Volverán a verse tus iniciales.', confirmText: 'Quitar foto', danger: true });
+        if (!ok) return;
+        UI.busy(photoRemove, true, 'Quitando…');
+        photoPick.disabled = true;
+        try {
+            await F.api('/profile/delete', { method: 'DELETE' });
+            UI.busy(photoRemove, false);
+            F.setPhoto(null);
+            photoNote('');
+            F.toast('Foto quitada.', 'success');
+        } catch (err) {
+            UI.busy(photoRemove, false);
+            if (err.status === 401) return;
+            if (err.code === 'NOT_AVAILABLE') { photoUnavailable(); return; }
+            photoNote(err.message, 'lose');
+        } finally {
+            if (photoAvailable) { refreshPhotoBtns(); if (photoRemove.hidden) photoPick.focus(); }
+        }
+    });
+
     UI.passwordToggles(document.querySelector('.settings'));
     [nameForm, emailForm, pwForm].forEach(UI.liveClear);
     $('logout').addEventListener('click', () => F.logout());
@@ -143,4 +232,5 @@
         if (errBox.hidden) editBtn.focus();
     });
     load();
+    loadPhoto();
 })();

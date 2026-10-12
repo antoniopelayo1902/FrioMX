@@ -2,3 +2,10 @@
 node_modules/
 .env
 coverage/
+infra/**/.terraform/
+*.tfstate
+*.tfstate.*
+infra/envs/lab/backend.hcl
+infra/envs/lab/lab.tfvars
+infra/envs/lab/.build/
+lambdas/dist/

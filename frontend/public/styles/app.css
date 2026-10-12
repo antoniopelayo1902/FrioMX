@@ -131,7 +131,7 @@ h2 { font-size: 1.3rem; }
     .main { padding: 16px 14px calc(var(--bottombar-h) + 24px); }
     .user-btn .name { display: none; }
     .bottombar {
-        display: grid; grid-template-columns: repeat(5, 1fr);
+        display: grid; grid-auto-flow: column; grid-auto-columns: 1fr;
         position: fixed; left: 0; right: 0; bottom: 0; z-index: 40;
         height: var(--bottombar-h);
         padding-bottom: env(safe-area-inset-bottom);

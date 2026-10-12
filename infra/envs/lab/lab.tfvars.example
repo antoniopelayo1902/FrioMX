@@ -1,0 +1,9 @@
+# Copia este archivo a lab.tfvars (no se versiona).
+# Cambia los correos @example.com por los reales: variables.tf los rechaza.
+region        = "us-east-1"
+instance_type = "t3.small"
+alert_emails = [
+  "integrante1@example.com",
+  "integrante2@example.com",
+  "integrante3@example.com",
+]

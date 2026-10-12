@@ -495,7 +495,7 @@
         // Si se recarga a media animación, al volver se muestra este resultado.
         try { sessionStorage.setItem(SS_PENDING, JSON.stringify({ data, placed })); } catch { /* sin almacenamiento */ }
         // El servidor ya cobró: mientras gira se muestra el saldo sin la apuesta.
-        F.setBalance(data.newBalance - data.totalAmountChange - data.totalBet);
+        if (Number.isFinite(data.newBalance)) F.setBalance(data.newBalance - data.totalAmountChange - data.totalBet);
         await spinTo(data.winningIndex);
         F.setBalance(data.newBalance);
         settle(data, placed);

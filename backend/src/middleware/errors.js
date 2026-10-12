@@ -1,8 +1,19 @@
+const multer = require('multer');
 const { AppError } = require('../lib/errors');
+
+const MULTER_MESSAGES = {
+    LIMIT_FILE_SIZE: 'La foto no puede pesar más de 5 MB',
+    LIMIT_FILE_COUNT: 'Solo se puede subir una foto',
+    LIMIT_UNEXPECTED_FILE: 'El archivo debe ir en el campo profileImage',
+};
 
 // Manejador central: todas las respuestas de error tienen la forma { error, code }.
 // eslint-disable-next-line no-unused-vars
 function errorHandler(err, req, res, next) {
+    // Los errores de multer no traen status: son siempre culpa de la petición.
+    if (err instanceof multer.MulterError) {
+        return res.status(400).json({ error: MULTER_MESSAGES[err.code] || 'Archivo inválido', code: 'VALIDATION_ERROR' });
+    }
     if (err instanceof AppError) {
         return res.status(err.status).json({ error: err.message, code: err.code, ...(err.extra || {}) });
     }

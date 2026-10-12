@@ -6,6 +6,8 @@ const { ddb, cancellationCodes } = require('../lib/ddb');
 const { config } = require('../config/env');
 const { AppError } = require('../lib/errors');
 const v = require('../lib/validate');
+const storage = require('./storageService');
+const notifications = require('./notificationService');
 
 const T = config.tables;
 const WELCOME_CHIPS = 1000;
@@ -59,6 +61,8 @@ async function register(body = {}) {
         throw err;
     }
 
+    // Avisos por correo (LLD §7). Si SNS falla la cuenta queda creada sin suscripción.
+    await notifications.subscribeUser(userId, email);
     return { token: signToken(userId), user: publicUser(user) };
 }
 
@@ -72,13 +76,16 @@ async function login(body = {}) {
     const ok = await bcrypt.compare(body.password, user ? user.passwordHash : DUMMY_HASH);
     if (!user || !ok) throw invalid;
 
+    // Avisos SNS en segundo plano (limpieza de pendientes y reintento de suscripción): no retrasan el login.
+    notifications.afterLogin(user);
     return { token: signToken(user.userId, user.tokenVersion || 0), user: publicUser(user) };
 }
 
-function profileOf(user) {
+// profileImageUrl es una URL firmada de 15 minutos, o null si no hay foto o no hay bucket.
+async function profileOf(user) {
     return {
         id: user.userId, name: user.name, age: user.age, email: user.email,
-        balance: user.balance, profileImageUrl: null,
+        balance: user.balance, profileImageUrl: await storage.imageUrlOf(user),
     };
 }
 
@@ -146,19 +153,22 @@ async function updateProfile(user, body = {}) {
                 const codes = cancellationCodes(err);
                 // Doble clic: la otra petición ya hizo este mismo cambio, así que no es un error.
                 const fresh = codes ? await getUser(user.userId) : null;
-                if (fresh && fresh.email === email) return profileOf(fresh);
+                if (fresh && fresh.email === email) return await profileOf(fresh);
                 if (codes && codes[1] === 'ConditionalCheckFailed') {
                     throw new AppError(409, 'EMAIL_IN_USE', 'El correo ya está en uso');
                 }
                 if (codes) throw new AppError(409, 'CONFLICT', 'Tu correo cambió en otra petición, recarga la página');
                 throw err;
             }
+            // Avisos al correo nuevo; la suscripción vieja se retira sin hacer fallar la petición.
+            await notifications.cleanupPending(user);
+            await notifications.resubscribe(user.userId, email, user.notifySubscriptionArn, user.notifyEmail || user.email);
         }
     } else {
         throw new AppError(400, 'VALIDATION_ERROR', 'Campo inválido');
     }
 
-    const profile = profileOf(await getUser(user.userId));
+    const profile = await profileOf(await getUser(user.userId));
     return token ? { ...profile, token } : profile;
 }
 

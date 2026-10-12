@@ -254,7 +254,7 @@ maybe('API FrioMx con DynamoDB Local', () => {
         const hist = await request(app).get('/api/user/activity').set(auth(p.token));
         expect(hist.body.items[0]).toMatchObject({ nameGame: 'Hi-Lo', bet: 30, balance: -30, result: 'EN_CURSO' });
 
-        queue = [3, 1, 2, 3, 4];
+        queue = [3, 1, 2, 3, 4, 0]; // el 3 repetido se descarta: hacen falta 6 valores para 5 minas fijas
         const mines = await request(app).post('/api/games/mines/start').set(auth(p.token)).send({ betAmount: 10 });
         await request(app).post('/api/games/mines/reveal').set(auth(p.token)).send({ gameId: mines.body.gameId, x: 4, y: 4 });
         const ma = await request(app).get('/api/games/mines/active').set(auth(p.token));
@@ -449,16 +449,31 @@ maybe('API FrioMx con DynamoDB Local', () => {
         expect(h.body.items.map((i) => i.result)).toEqual(['EN_CURSO', 'ABANDONADA']);
     });
 
-    test('cerrar una ronda no borra el puntero de otra más nueva', async () => {
+    test('cerrar la ronda libera el puntero en la misma transacción; si el cierre falla el puntero se queda', async () => {
         const p = await newPlayer();
+        const row = async () => (await ddb.send(new GetCommand({ TableName: T.users, Key: { userId: p.id }, ConsistentRead: true }))).Item;
         queue = [7];
         const a = await request(app).post('/api/games/hi-lo/deal').set(auth(p.token)).send({ betAmount: 2 });
-        // Se fuerza a que el puntero apunte a otra ronda (como si A se hubiera reemplazado).
-        const fake = crypto.randomUUID();
-        await ddb.send(new UpdateCommand({ TableName: T.users, Key: { userId: p.id }, UpdateExpression: 'SET activeHiloId = :f', ExpressionAttributeValues: { ':f': fake } }));
-        await request(app).post('/api/games/hi-lo').set(auth(p.token)).send({ roundId: a.body.roundId, prediction: 'higher' });
-        const user = (await ddb.send(new GetCommand({ TableName: T.users, Key: { userId: p.id } }))).Item;
-        expect(user.activeHiloId).toBe(fake);
+        expect((await row()).activeHiloId).toBe(a.body.roundId);
+        const played = await request(app).post('/api/games/hi-lo').set(auth(p.token)).send({ roundId: a.body.roundId, prediction: 'higher' });
+        expect(played.status).toBe(200);
+        let user = await row();
+        expect(user.activeHiloId).toBeUndefined();
+        expect(user.activeHiloExp).toBeUndefined();
+
+        // Minas: cobro libera su puntero; una ronda vencida no se cierra y el puntero no se toca.
+        queue = [0, 1, 2, 3, 4];
+        const m = await request(app).post('/api/games/mines/start').set(auth(p.token)).send({ betAmount: 1 });
+        const past = Math.floor(Date.now() / 1000) - 10;
+        await ddb.send(new UpdateCommand({ TableName: T.gameRounds, Key: { gameId: m.body.gameId }, UpdateExpression: 'SET expiresAt = :e', ExpressionAttributeValues: { ':e': past } }));
+        const late = await request(app).post('/api/games/mines/reveal').set(auth(p.token)).send({ gameId: m.body.gameId, x: 4, y: 4 });
+        expect(late.status).toBe(404);
+        user = await row();
+        expect(user.activeMinesId).toBe(m.body.gameId);
+        // whyFailed libera ese puntero desfasado y deja abrir otra.
+        const again = await request(app).post('/api/games/mines/start').set(auth(p.token)).send({ betAmount: 1 });
+        expect(again.status).toBe(201);
+        expect((await row()).activeMinesId).toBe(again.body.gameId);
     });
 
     test('ronda de otro juego da 404, no "es de otro jugador"', async () => {
@@ -521,5 +536,29 @@ maybe('API FrioMx con DynamoDB Local', () => {
             const r = await request(app).post('/api/auth/register').send({ name, age: 25, email, password: 'contrasena1' });
             expect(r.status).toBe(400);
         }
+    });
+
+    test('si falla leer el saldo después de jugar, responde 200 con newBalance null (la jugada ya se aplicó)', async () => {
+        const p = await newPlayer();
+        const real = ddb.send.bind(ddb);
+        let committed = false;
+        const spy = jest.spyOn(ddb, 'send').mockImplementation((cmd) => {
+            if (cmd.constructor.name === 'TransactWriteCommand') committed = true;
+            if (committed && cmd.constructor.name === 'GetCommand' && cmd.input.TableName === T.users) {
+                return Promise.reject(Object.assign(new Error('falla simulada'), { name: 'InternalServerError' }));
+            }
+            return real(cmd);
+        });
+        queue = [0];
+        let res;
+        try {
+            res = await request(app).post('/api/games/roulette').set(auth(p.token))
+                .send({ bets: [{ type: 'color', value: 'Verde', amount: 10 }] });
+        } finally {
+            spy.mockRestore();
+        }
+        expect(res.status).toBe(200);
+        expect(res.body.newBalance).toBeNull();
+        expect(await balance(p.token)).toBe(1350);
     });
 });

@@ -33,8 +33,36 @@ EC2, DynamoDB, Lambda, SQS, SNS, EventBridge, S3, Secrets Manager, CloudWatch.
 
 ## Estado
 
-Fase 2 en progreso. Frontend y backend funcionando en local con DynamoDB Local.
-Pendiente: infraestructura en AWS, recargas, bono y ranking, foto de perfil.
+Fase 2. Los tres flujos corren en AWS Learner Lab y se despliegan con un solo
+script (`scripts/deploy.sh`) o con el CD al hacer merge a `main`:
+
+- Juegos (ruleta, hi-lo y minas) con historial, en EC2 con DynamoDB.
+- Recargas asíncronas: SQS, Lambda `friomx-recharge-worker` y correo por SNS.
+- Bono diario y ranking semanal: EventBridge con las Lambdas
+  `friomx-daily-bonus` y `friomx-weekly-ranking`, página de Ranking.
+- Foto de perfil en S3 con URL firmada.
+- Monitoreo: 5 métricas, 2 alarmas con correo al equipo y dashboard `FrioMx`.
+
+En local corren juegos, historial, perfil sin foto y ranking de la semana en
+curso (ver [Notas](#notas)).
+
+## Pendiente
+
+- Cobertura de pruebas: el umbral de `backend/jest.config.js` y
+  `lambdas/jest.config.js` está en 0; RNF-09 pide 70% en líneas, ramas,
+  funciones y sentencias antes del 12 de noviembre.
+- Verificación del monitoreo en la nube: el dashboard `FrioMx` y las 2 alarmas
+  (`friomx-api-5xx` y `friomx-recharge-dlq`) ya están en Terraform (módulo
+  `monitoring`); falta comprobar con tráfico real que las métricas llegan y que
+  las alarmas avisan por correo.
+- Protección de `main` en GitHub (pull request obligatorio, 1 aprobación y los
+  3 jobs del CI en verde): se configura en Settings → Branches y no se puede
+  verificar desde el repo.
+- Fuera de alcance: HTTPS, porque el lab no ofrece dominio ni certificado.
+- Para el reporte en PDF: el diagrama de arquitectura (`docs/02-HLD.md`,
+  sección 3) está en mermaid. Hay que exportarlo a imagen, por ejemplo
+  pegándolo en [mermaid.live](https://mermaid.live) y descargando PNG o SVG, o
+  rehacerlo en draw.io.
 
 ## Correr en local
 
@@ -111,19 +139,277 @@ Para apagar todo, `Ctrl+C` en cada terminal.
   cuentas y las partidas. Al volver a levantarlo hay que correr otra vez
   `npm run db:local:tables` y crear una cuenta nueva.
 - Si un puerto está ocupado, libéralo con `lsof -ti tcp:8000,3000,8080 | xargs kill`.
-- Todavía no funcionan en local porque dependen de la infraestructura en AWS:
-  foto de perfil, recargas, bono diario y ranking.
+- En local sí funcionan los juegos, el historial, el perfil y el ranking de la
+  semana en curso (se llena jugando; con dos o tres cuentas se ve el orden).
+- No funcionan en local porque dependen de AWS, y la app lo avisa sin
+  romperse: la foto de perfil ("estará disponible pronto"), las recargas
+  ("no están disponibles por ahora", 503) y las Lambdas programadas (bono
+  diario y cierre semanal). Por eso "Semanas cerradas" sale vacío en local.
+
+## Desplegar en AWS (Learner Lab)
+
+Todo se crea con Terraform y se despliega con `scripts/deploy.sh`, desde tu
+máquina (macOS o Linux). Los comandos se corren desde la raíz del repo
+(`FrioMX/`) salvo que se diga otra cosa.
+
+### Requisitos
+
+| Herramienta | Versión | Comprobar |
+|---|---|---|
+| AWS CLI | v2 | `aws --version` |
+| Terraform | 1.16.x recomendado (el de CI y CD), mínimo 1.11 | `terraform version` |
+| Node.js y npm | 22 recomendado (el de la nube), 20 o superior sirve | `node -v` |
+| git | cualquiera reciente | `git --version` |
+| GitHub CLI (`gh`) | opcional, solo para el CD | `gh --version` |
+
+`deploy.sh` también usa `curl` y `tar`, que ya vienen en macOS y Linux.
+
+### 1. Iniciar el lab y configurar credenciales
+
+Hay que repetir este paso en cada sesión del lab, porque las credenciales
+cambian cada vez.
+
+1. En AWS Academy abre el Learner Lab y pulsa **Start Lab**. Espera a que el
+   punto junto a "AWS" esté verde.
+2. Pulsa **AWS Details** y, junto a "AWS CLI", **Show**. Copia el bloque
+   completo (`[default]`, `aws_access_key_id`, `aws_secret_access_key` y
+   `aws_session_token`) y pégalo en `~/.aws/credentials`, reemplazando lo que
+   hubiera en `[default]`:
+   ```
+   mkdir -p ~/.aws
+   nano ~/.aws/credentials
+   ```
+3. Solo la primera vez, fija la región en `~/.aws/config`:
+   ```
+   [default]
+   region = us-east-1
+   output = json
+   ```
+4. Comprueba que la CLI entra a la cuenta del lab:
+   ```
+   aws sts get-caller-identity
+   ```
+   Debe mostrar tu número de cuenta y un ARN con `voclabs`. Si dice
+   `ExpiredToken` o `InvalidClientTokenId`, vuelve a copiar el bloque.
+
+### 2. Preparar Terraform (solo la primera vez)
+
+1. Crear el bucket del estado de Terraform y guardar su configuración. Se
+   escribe primero a un archivo temporal fuera del repo y solo se mueve si el
+   script terminó bien, así un error (por ejemplo, credenciales vencidas) no
+   deja un `backend.hcl` vacío:
+   ```
+   TMP_HCL="$(mktemp)"
+   bash infra/bootstrap/bootstrap-state.sh > "$TMP_HCL" && mv "$TMP_HCL" infra/envs/lab/backend.hcl
+   cat infra/envs/lab/backend.hcl
+   ```
+   Crea (o deja como está) el bucket privado y versionado
+   `friomx-tfstate-<cuenta>`. Se puede volver a correr sin problema. Si falla,
+   revisa el paso 1 y repítelo; un `backend.hcl` anterior queda intacto.
+2. Crear las variables del lab y poner los correos reales del equipo, que
+   recibirán las alarmas:
+   ```
+   cp infra/envs/lab/lab.tfvars.example infra/envs/lab/lab.tfvars
+   nano infra/envs/lab/lab.tfvars
+   ```
+   `alert_emails` es obligatoria: Terraform se detiene si está vacía o si
+   quedan los correos `@example.com` del ejemplo.
+   Deja `region = "us-east-1"`: es la región del Learner Lab y la que permite
+   la política de seguridad del frontend para las fotos. `instance_type` puede
+   quedarse como está.
+
+`backend.hcl` y `lab.tfvars` no se suben al repo.
+
+### 3. Desplegar
+
+```
+bash scripts/deploy.sh
+```
+
+El script arma las Lambdas, corre `terraform init` y `terraform apply`,
+empaqueta backend y frontend, los sube a S3, ordena a la instancia por SSM que
+instale la versión nueva y al final prueba `/api/health` y `/login`. La
+primera vez tarda entre 10 y 15 minutos, casi todo esperando a que la instancia
+nueva instale Node.js y nginx; los siguientes tardan unos minutos.
+Termina con una línea como esta:
+
+```
+==> Salud OK (intento 1). FrioMx en http://<public_ip>/
+```
+
+Esa es la URL de la app. Para verla otra vez:
+
+```
+terraform -chdir=infra/envs/lab output -raw public_ip
+```
+
+Opciones útiles:
+
+- `bash scripts/deploy.sh --skip-terraform` vuelve a desplegar solo la app
+  (no arma Lambdas ni aplica Terraform; lee las salidas del estado).
+- Si falla por tiempo de espera la primera vez, vuelve a correrlo: es seguro
+  repetirlo. Para esperar más: `DEPLOY_TIMEOUT=1200 bash scripts/deploy.sh`
+  (por defecto 900 s, que también es el tope del comando en la instancia; `SSM_WAIT`, 300 s por defecto, es la espera a que la
+  instancia aparezca en SSM).
+
+### 4. Confirmar los correos de SNS
+
+AWS no manda nada a un correo hasta que su dueño confirma la suscripción.
+
+- **Equipo:** cada correo de `alert_emails` recibe "AWS Notification -
+  Subscription Confirmation" del tema `friomx-ops-alerts`. Pulsa **Confirm
+  subscription**. Ahí llegan las alarmas.
+- **Jugadores:** al registrarse en la app, cada jugador recibe la misma clase
+  de correo del tema `friomx-user-notifications`. Sin confirmarlo la app
+  funciona igual, pero no llegan los avisos de recarga, bono ni premio.
+
+Revisa también la carpeta de spam.
+
+### 5. Probar los tres flujos
+
+Abre `http://<public_ip>/`, crea una cuenta con un correo tuyo y confirma el
+correo de SNS que te llega.
+
+**Flujo 1, jugar.** Juega una ruleta, un hi-lo o una partida de minas y abre
+**Historial**: la partida aparece con su resultado y el saldo cambia.
+
+**Flujo 2, recargar.** En **Saldo** elige un paquete (500, 1000 o 2500
+fichas). Se ve "Procesando tu recarga…" y en unos segundos "Listo, se sumaron
+N fichas a tu saldo". Llega el correo "FrioMx: recarga lista". El límite es
+de 3 recargas por día.
+
+**Flujo 3, bono diario y ranking semanal.** Las reglas de EventBridge los
+corren solos (bono a las 08:00 y cierre del ranking los lunes a las 01:10,
+hora de Ciudad de México). Para probarlos sin esperar, desde la raíz del repo:
+
+1. Bono diario. Se lo lleva quien jugó en los últimos 7 días (por eso primero
+   juega una partida):
+   ```
+   aws lambda invoke --function-name friomx-daily-bonus \
+     --cli-binary-format raw-in-base64-out --payload '{}' out.json
+   cat out.json
+   ```
+   Si aún no recibiste el bono de hoy, responde `"granted"` mayor a 0, tu
+   saldo sube 100 fichas y llega el correo "FrioMx: bono diario". Si ya lo
+   recibiste (por ejemplo, de la regla de las 08:00), o al repetirlo el mismo
+   día, no acredita otra vez y cuenta en `"skipped"`.
+2. Ranking semanal. Cada semana se cierra una sola vez, así que se usa una
+   semana pasada que nadie haya cerrado, por ejemplo la de hace 3 semanas.
+   Corre solo la línea de tu sistema:
+   ```
+   WEEK=$(date -v-21d +%G-W%V)
+   ```
+   (en macOS) o
+   ```
+   WEEK=$(date -d '21 days ago' +%G-W%V)
+   ```
+   (en Linux), y revisa que `echo "$WEEK"` imprima algo como `2026-W38`.
+   Siembra jugadores ficticios en esa semana con tu cuenta en primer lugar
+   (`seed.js` usa las dependencias de `backend/`, por eso el `npm ci`):
+   ```
+   (cd backend && npm ci)
+   node scripts/seed.js --week "$WEEK" --include-email <tu correo de la app>
+   ```
+   Cierra la semana:
+   ```
+   aws lambda invoke --function-name friomx-weekly-ranking \
+     --cli-binary-format raw-in-base64-out --payload "{\"weekId\":\"$WEEK\"}" out.json
+   cat out.json
+   ```
+   Responde `"status":"CLOSED"` con el top 3. Ganas 1000 fichas, te llega el
+   correo del premio y la semana aparece en **Ranking**, en "Semanas cerradas"
+   (o directo en `http://<public_ip>/ranking?weekId=<semana>`). `seed.js`
+   rechaza la semana en curso y las ya cerradas; si dice que está cerrada,
+   elige otra (por ejemplo `-v-28d` o `'28 days ago'`).
+
+`out.json` es solo la respuesta de la Lambda; bórralo al terminar.
+
+Las alarmas, métricas y el dashboard están en CloudWatch, en la consola del
+lab (**Dashboards → FrioMx**).
+
+### 6. Despliegue continuo (CD)
+
+Cada merge a `main` corre las pruebas y después `scripts/deploy.sh` en GitHub
+Actions (`.github/workflows/cd.yml`). Necesita 5 secretos en el repo.
+
+Una sola vez, después de los pasos 1 y 2:
+
+```
+gh auth login
+gh secret set TF_BACKEND_HCL < infra/envs/lab/backend.hcl
+gh secret set TF_LAB_TFVARS  < infra/envs/lab/lab.tfvars
+```
+
+En cada sesión del lab, después de pegar las credenciales nuevas en
+`~/.aws/credentials`:
+
+```
+bash scripts/update-gh-secrets.sh
+```
+
+Copia `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` y `AWS_SESSION_TOKEN` del
+bloque `[default]` a los secretos de GitHub sin mostrarlos en pantalla.
+Opciones: `--repo owner/repo` si no estás dentro del clon, y
+`--profile <nombre>` si las credenciales están en otro bloque. Si las
+credenciales del lab vencieron, el CD falla en el paso de AWS hasta que
+vuelvas a correr este script. Para lanzar el CD a mano:
+`gh workflow run CD`.
+
+### 7. Si se reinicia el lab
+
+Al terminar la sesión, el lab detiene la instancia; al iniciar otra, la vuelve
+a encender y los servicios de la app arrancan solos.
+
+- La URL no cambia: la IP elástica se conserva.
+- Las credenciales sí cambian: repite el paso 1 (y `update-gh-secrets.sh` si
+  usas el CD) antes de correr `aws` o `deploy.sh`.
+- No hay que repetir el paso 2. Para desplegar cambios basta con
+  `bash scripts/deploy.sh`.
+
+### 8. Destruir
+
+```
+bash lambdas/build.sh
+terraform -chdir=infra/envs/lab init -backend-config=backend.hcl
+terraform -chdir=infra/envs/lab destroy -var-file=lab.tfvars
+```
+
+`lambdas/build.sh` va primero porque Terraform necesita `lambdas/dist/` para
+leer el plan, aunque vaya a borrar todo. Escribe `yes` para confirmar. Se
+borran la instancia, la IP elástica, las 7 tablas con sus datos, las colas,
+los temas, las Lambdas, las alarmas, el secreto y los buckets de fotos y de
+artefactos con su contenido.
+
+Queda el bucket del estado `friomx-tfstate-<cuenta>`, porque lo creó
+`bootstrap-state.sh` y no Terraform. Así se puede volver a desplegar con el
+paso 3 sin repetir el 2. Si quieres borrar también ese bucket, vacíalo desde la
+consola de S3 (tiene versionado) y elimínalo ahí.
 
 ## Pruebas
 
-Con DynamoDB Local levantado:
+Backend, con DynamoDB Local levantado (las pruebas crean y borran sus propias
+tablas, no tocan las de la app):
 
 ```
 cd backend
 DDB_ENDPOINT=http://localhost:8000 npm test
 ```
 
-Sin `DDB_ENDPOINT` solo corren las pruebas unitarias del motor de juegos.
+Sin `DDB_ENDPOINT` solo corren las pruebas unitarias (motor de juegos,
+utilidades, configuración y recargas con DynamoDB simulado); las de la API se
+saltan.
+
+Lambdas (no necesitan DynamoDB Local; AWS se simula con `aws-sdk-client-mock`):
+
+```
+cd lambdas
+npm ci
+npm test
+```
+
+Las dos suites generan reporte de cobertura en `coverage/`. El CI las corre en
+cada pull request a `main`, junto con `terraform fmt -check` y
+`terraform validate`.
 
 ## Documentación
 
