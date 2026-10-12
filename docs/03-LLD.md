@@ -9,6 +9,7 @@ FrioMX/
   frontend/
     server.js               servidor Express: páginas, 404, cabeceras de seguridad y, solo en desarrollo, proxy de /api
     public/                 páginas HTML, assets/, styles/ y scripts/ (app.js, ui.js y un script por página)
+    e2e/                    pruebas de punta a punta con Playwright (`npm run e2e`, configuración en playwright.config.js)
   backend/
     server.js               carga el secreto y arranca la API
     jest.config.js
@@ -56,8 +57,13 @@ FrioMX/
     deploy.sh               build de Lambdas, terraform apply, empaquetado, subida a S3 y SSM (lo usan las personas y el CD)
     deploy-on-instance.sh   se ejecuta en EC2 vía SSM
     update-gh-secrets.sh    copia credenciales del lab a secretos de GitHub
+    resume-lab.sh           sesión nueva del lab: arranca la EC2 si está detenida, espera SSM y /api/health (`--gh-repo` renueva los secretos)
+    smoke.sh                prueba de punta a punta de los 3 flujos contra la nube (`--url`)
+    monitoring-check.sh     métricas, estado de las 2 alarmas y URL del dashboard (`--demo-alarms`, `--reset`)
+    destroy.sh              vacía los buckets y corre terraform destroy (`--yes`, `--keep-state`)
     seed.js                 jugadores y estadísticas de una semana pasada para probar el cierre del ranking (`--week <YYYY-Www>`, `--include-email <correo>`)
   .github/workflows/ci.yml, cd.yml
+  .github/CODEOWNERS, pull_request_template.md
   docs/
 ```
 
@@ -263,7 +269,7 @@ Tablero 5×5 (índice `i = x*5 + y`), 5 minas, resuelto en el servidor (el naveg
 - **Vista de partida**: `{gameId, bet, boardSize, minesCount, revealed:[{x,y}], safeCount, multiplier, nextMultiplier, cashoutAmount, nextCashoutAmount, maxPayout, atCap}`.
 - **reveal(x, y)**: si la casilla ya está destapada responde el estado sin cambios (un reintento siempre es seguro). Si es mina, cierra la ronda con `LOST` y responde las minas. Si es la casilla segura número 20, cierra con `WON` y paga como un cobro. Si no, Update partida `SET revealed, version = version + 1` con `version = :v AND status = ACTIVE` y, si choca con otro destape simultáneo, 409 CONFLICT para que el navegador lo repita.
 - **cashout**: con al menos una casilla segura, cierra la ronda con `CASHED` y paga `cashoutAmount = floor(bet × 0.95 × C(25,k)/C(20,k))`, el mismo número que mostraba la pantalla.
-- Cada entrada del historial guarda un `detail` corto ("Cayó 16 · Rojo · Par · 13–24", "Q → 3 · elegiste Menor", "Cobraste tras 3 casillas seguras").
+- Cada entrada del historial guarda un `detail` corto ("Cayó 16 · Rojo · Par · 13–24 · apostaste Rojo 10, Par 5", "Q → 3 · elegiste Menor", "Cobraste tras 3 casillas seguras").
 - Las banderas son solo visuales en el navegador.
 
 ## 6. Lambdas
@@ -416,7 +422,7 @@ Dashboard `FrioMx`: las 5 métricas, CPU de EC2, `FrioMx/RechargesCompleted`, `B
 | functions | `archive_file` por Lambda, `aws_lambda_function` con `source_code_hash`, `aws_lambda_event_source_mapping`, `aws_cloudwatch_event_rule`/`target`, `aws_lambda_permission`, grupos de logs |
 | monitoring | alarmas y `aws_cloudwatch_dashboard` |
 
-- Salidas (`infra/envs/lab/outputs.tf`): `public_ip`, `instance_id`, `artifacts_bucket`, `uploads_bucket`, `recharge_queue_url`, `recharge_dlq_url`, `user_topic_arn`, `ops_topic_arn`, `jwt_secret_arn`, `aws_region`, `tables` (mapa `users`, `user_emails`, `activity`, `weekly_stats`, `recharges`, `game_rounds`, `leaderboard` → nombre) y `backend_env` (el contenido completo de `backend.env`, una línea `KEY=VALUE` por variable). `scripts/deploy.sh`, que también usa el CD, las lee una por una con `terraform output -raw <nombre>` y escribe `backend_env` tal cual.
+- Salidas (`infra/envs/lab/outputs.tf`): `public_ip`, `instance_id`, `artifacts_bucket`, `uploads_bucket`, `recharge_queue_url`, `recharge_dlq_url`, `user_topic_arn`, `ops_topic_arn`, `jwt_secret_arn`, `aws_region`, `tables` (mapa `users`, `user_emails`, `activity`, `weekly_stats`, `recharges`, `game_rounds`, `leaderboard` → nombre) y `backend_env` (el contenido completo de `backend.env`, una línea `KEY=VALUE` por variable). En Entrega 3 se agregan `dashboard_url` y `function_names` (mapa `recharge-worker`, `daily-bonus`, `weekly-ranking` → nombre), que usan los scripts de operación. `scripts/deploy.sh`, que también usa el CD, las lee una por una con `terraform output -raw <nombre>` y escribe `backend_env` tal cual.
 
 ## 14. Despliegue de la aplicación (`scripts/deploy-on-instance.sh`)
 
@@ -437,9 +443,9 @@ Al terminar con `Success`, `deploy.sh` repite la prueba de humo desde afuera con
 ## 15. CI/CD
 
 `ci.yml`, en `pull_request` hacia `main`:
-- Jobs en paralelo: `backend` (Node 22, `npm ci`, `npm test -- --coverage`), `lambdas` (igual) y `terraform` (`hashicorp/setup-terraform` con versión fija 1.16.5, `fmt -check`, `init -backend=false`, `validate`). El job `deploy` del CD también usa `hashicorp/setup-terraform` con la misma versión.
-- `backend/jest.config.js` define `collectCoverageFrom: ["src/**/*.js"]` y `lambdas/jest.config.js` define `["*/index.js", "shared/**/*.js", "!dist/**"]`. Los dos usan `coverageThreshold.global`, que arranca en 0 (al inicio casi todo el código importado no tiene pruebas y un umbral más alto bloquearía todos los PR), sube a 30 cuando los tres flujos tienen pruebas y a 70 en líneas, ramas, funciones y sentencias antes de la entrega final.
-- Protección de `main`: pull request obligatorio, 1 aprobación, los 3 jobs en verde. Se configura en GitHub (Settings → Branches), no en el repositorio; hay que confirmar que esté activa.
+- Jobs en paralelo: `backend` (Node 22, `npm ci`, `npm test -- --coverage`), `lambdas` (igual), `e2e` (Playwright en Chromium contra backend, frontend y DynamoDB Local levantados en el runner; si falla sube el reporte como artefacto) y `terraform` (`hashicorp/setup-terraform` con versión fija 1.16.5, `fmt -check`, `init -backend=false`, `validate`). El job `deploy` del CD también usa `hashicorp/setup-terraform` con la misma versión.
+- `backend/jest.config.js` define `collectCoverageFrom: ["src/**/*.js"]` y `lambdas/jest.config.js` define `["*/index.js", "shared/**/*.js", "!dist/**"]`. Los dos usan `coverageThreshold.global` con 70 en líneas, ramas, funciones y sentencias (RNF-09); empezó en 0 y se subió cuando los tres flujos tuvieron pruebas. El job `backend` levanta `amazon/dynamodb-local` como servicio y exporta `DDB_ENDPOINT=http://localhost:8000`: sin él las pruebas de API se saltan, la cobertura baja de 70 y el job falla.
+- Protección de `main` (ruleset de GitHub "main protegida"): nadie hace push directo, todo entra por pull request, se requiere la aprobación del dueño del código (`.github/CODEOWNERS`) y no se permite force push ni borrar la rama. El CI corre en cada PR con 4 jobs (`backend`, `lambdas`, `e2e`, `terraform`).
 
 `cd.yml`, en `push` a `main`:
 - `concurrency: { group: deploy-lab, cancel-in-progress: false }`.

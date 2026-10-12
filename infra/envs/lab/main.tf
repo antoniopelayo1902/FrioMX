@@ -33,6 +33,7 @@ module "data" {
 module "storage" {
   source     = "../../modules/storage"
   account_id = local.account_id
+  region     = var.region
 }
 
 module "secrets" {

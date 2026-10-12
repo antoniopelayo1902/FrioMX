@@ -157,8 +157,8 @@ h2 { font-size: 1.3rem; }
 .card { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); padding: 20px; box-shadow: var(--shadow); }
 .card + .card { margin-top: 16px; }
 .grid { display: grid; gap: 16px; }
-.grid-2 { grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); }
-.grid-3 { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+.grid-2 { grid-template-columns: repeat(auto-fit, minmax(min(280px, 100%), 1fr)); }
+.grid-3 { grid-template-columns: repeat(auto-fit, minmax(min(220px, 100%), 1fr)); }
 .stack { display: flex; flex-direction: column; gap: 12px; }
 .row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
 
@@ -213,6 +213,31 @@ h2 { font-size: 1.3rem; }
 }
 .chip-btn:hover { border-color: var(--accent); }
 .chip-btn:disabled { opacity: .45; cursor: not-allowed; }
+/* Fichas rápidas: el mismo diseño de ficha de casino en Ruleta, Hi-Lo y Minas. */
+.bet-chips { display: flex; gap: 10px; flex-wrap: wrap; padding-top: 2px; }
+.bet-chip {
+    --chip: #2f6fe0; --chip-ink: #fff;
+    position: relative; width: 46px; height: 46px; padding: 0; border-radius: 50%;
+    display: grid; place-items: center; cursor: pointer;
+    font: inherit; font-family: 'Khand', sans-serif; font-size: 1.05rem; color: var(--chip-ink);
+    background:
+        radial-gradient(circle, var(--chip) 0 52%, transparent 53%),
+        repeating-conic-gradient(var(--chip) 0 22.5deg, rgba(255, 255, 255, .85) 22.5deg 45deg);
+    border: 2px solid rgba(0, 0, 0, .35);
+    box-shadow: inset 0 0 0 3px var(--chip), 0 3px 0 rgba(0, 0, 0, .35);
+    transition: transform .12s, box-shadow .12s;
+}
+.bet-chip span { position: relative; white-space: nowrap; line-height: 1; }
+.bet-chip:hover:not(:disabled) { transform: translateY(-2px); }
+.bet-chip:focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; }
+.bet-chip[aria-pressed="true"] { transform: translateY(-3px); box-shadow: inset 0 0 0 3px var(--chip), 0 0 0 3px var(--bg), 0 0 0 5px var(--gold), 0 6px 12px rgba(0, 0, 0, .45); }
+.bet-chip:disabled { opacity: .45; cursor: not-allowed; }
+.bet-chip-10 { --chip: #2f6fe0; }
+.bet-chip-50 { --chip: #15a35f; }
+.bet-chip-100 { --chip: #222838; }
+.bet-chip-500 { --chip: #8b5cf6; }
+@media (max-width: 380px) { .bet-chips { gap: 6px; } .bet-chip { width: 42px; height: 42px; font-size: .98rem; } }
+.bet-box .error:empty { display: none; }
 
 .badge { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 999px; font-size: .78rem; font-weight: 700; background: var(--card-2); border: 1px solid var(--line); }
 .badge-win { color: var(--win); border-color: rgba(34, 197, 94, .4); background: rgba(34, 197, 94, .1); }

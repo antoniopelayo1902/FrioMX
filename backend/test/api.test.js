@@ -179,6 +179,9 @@ maybe('API FrioMx con DynamoDB Local', () => {
         expect(res.body.totalAmountChange).toBe(3500 - 50); // verde paga 35 a 1
         expect(res.body.newBalance).toBe(4450);
         expect(res.body.results.map((r) => r.change)).toEqual([3500, -50]);
+        const hist = await request(app).get('/api/user/activity').set(auth(p.token));
+        const row = hist.body.items.find((h) => h.nameGame === 'Ruleta');
+        expect(row.detail).toBe('Cayó 0 · Verde · apostaste Verde 100, Par 50');
         const tooMuch = await request(app).post('/api/games/roulette').set(auth(p.token))
             .send({ bets: [{ type: 'color', value: 'Rojo', amount: 5000 }] });
         expect(tooMuch.status).toBe(409);

@@ -37,6 +37,17 @@ function slotText(slot) {
         .filter(Boolean).join(' · ');
 }
 
+// Qué se apostó, en palabras: "Rojo 10, 1–12 5".
+function betText(bet) {
+    if (bet.type === 'parity') return `${bet.value === 'par' ? 'Par' : 'Impar'} ${bet.amount}`;
+    if (bet.type === 'dozen') return `${DOZEN[bet.value]} ${bet.amount}`;
+    return `${bet.value} ${bet.amount}`;
+}
+
+function rouletteDetail(spin) {
+    return `Cayó ${slotText(spin.winningSlot)} · apostaste ${spin.results.map(betText).join(', ')}`;
+}
+
 // ---------- piezas de transacción ----------
 
 function activityPut(userId, sk, { gameId, nameGame, bet, net, result, dateGame, detail }, onlyNew) {
@@ -308,7 +319,7 @@ async function roulettePlay(user, body = {}, rng) {
         },
         activityPut(user.userId, `${nowIso}#${gameId}`, {
             gameId, nameGame: 'Ruleta', bet: spin.total, net: spin.net, result: resultOf(spin.net), dateGame: nowIso,
-            detail: `Cayó ${slotText(spin.winningSlot)}`,
+            detail: rouletteDetail(spin),
         }, true),
         weeklyItem(isoWeekId(now), user, spin.net, true),
     ], { 0: insufficientFunds });

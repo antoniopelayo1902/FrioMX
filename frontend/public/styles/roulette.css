@@ -71,7 +71,7 @@
 .rl-bd-title { margin: 10px 0 0; padding-top: 8px; border-top: 1px solid var(--line); font-size: .85rem; color: var(--muted); }
 .rl-breakdown {
     list-style: none; margin: 6px 0 0; padding: 0;
-    display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 6px;
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(min(230px, 100%), 1fr)); gap: 6px;
     font-size: .9rem;
 }
 .rl-breakdown li {
@@ -96,34 +96,9 @@
 .rl-group-head { display: flex; justify-content: space-between; align-items: baseline; font-size: .74rem; text-transform: uppercase; letter-spacing: .12em; color: var(--muted); font-weight: 700; }
 .rl-pay-hint { text-transform: none; letter-spacing: 0; font-weight: 500; }
 
-/* Fichas */
-.rl-chips { display: flex; gap: 8px; flex-wrap: wrap; }
-.rl-chip {
-    --chip: #e6e9f2; --chip-ink: #1b2236;
-    position: relative; width: 46px; height: 46px; border-radius: 50%;
-    display: grid; place-items: center; cursor: pointer;
-    font: inherit; font-family: 'Khand', sans-serif; font-size: 1.05rem; color: var(--chip-ink);
-    background:
-        radial-gradient(circle, var(--chip) 0 52%, transparent 53%),
-        repeating-conic-gradient(var(--chip) 0 22.5deg, rgba(255, 255, 255, .85) 22.5deg 45deg);
-    border: 2px solid rgba(0, 0, 0, .35);
-    box-shadow: inset 0 0 0 3px var(--chip), 0 3px 0 rgba(0, 0, 0, .35);
-    transition: transform .12s, box-shadow .12s;
-}
-.rl-chip span { position: relative; }
-.rl-chip:hover { transform: translateY(-2px); }
-.rl-chip[aria-pressed="true"] { transform: translateY(-3px); box-shadow: inset 0 0 0 3px var(--chip), 0 0 0 3px var(--bg), 0 0 0 5px var(--gold), 0 6px 12px rgba(0, 0, 0, .45); }
-.rl-chip-5 { --chip: #d22f3c; --chip-ink: #fff; }
-.rl-chip-10 { --chip: #2f6fe0; --chip-ink: #fff; }
-.rl-chip-50 { --chip: #15a35f; --chip-ink: #fff; }
-.rl-chip-100 { --chip: #222838; --chip-ink: #fff; }
-.rl-chip-500 { --chip: #8b5cf6; --chip-ink: #fff; }
-.rl-chip-custom { --chip: var(--gold); --chip-ink: #3a2a00; font-size: .9rem; }
-/* Ficha "Otro" con números largos: misma cifra que en la mesa ("5,000"), letra más chica. */
-.rl-chip-custom[data-len="4"] { font-size: .86rem; }
-.rl-chip-custom[data-len="5"] { font-size: .76rem; }
-.rl-chip-custom[data-len="6"] { font-size: .66rem; }
-.rl-chip span { white-space: nowrap; line-height: 1; }
+/* Valor de la ficha: usa el control de apuesta común (app.css) */
+.rl-bet .bet-box { gap: 6px; }
+.rl-bet .bet-box label { font-size: .74rem; text-transform: uppercase; letter-spacing: .12em; color: var(--muted); font-weight: 700; }
 
 /* Casillas */
 .rl-cells { display: grid; gap: 8px; }
@@ -155,7 +130,7 @@
     border: 2px solid #7a5310; box-shadow: 0 2px 4px rgba(0, 0, 0, .4);
 }
 .rl-cell.has-bet .rl-stake { display: inline-flex; }
-.rl-cell:disabled, .rl-chip:disabled { cursor: not-allowed; }
+.rl-cell:disabled { cursor: not-allowed; }
 .rl-cell:disabled:hover { border-color: var(--line); }
 .rl-cell.has-bet:disabled:hover { border-color: var(--gold); }
 
@@ -177,8 +152,9 @@
 @media (min-width: 901px) and (max-height: 800px) {
     .rl-table { padding: 14px 16px; gap: 10px; }
     .rl-fieldset { gap: 10px; }
-    .rl-cell { min-height: 54px; }
-    .rl-chip { width: 42px; height: 42px; }
+    .rl-cell { min-height: 48px; }
+    .rl-bet .bet-input .input, .rl-bet .bet-input .btn { min-height: 40px; }
+    .rl-bet .bet-chip { width: 40px; height: 40px; font-size: .95rem; }
     .rl-result { min-height: 118px; padding: 10px 14px; }
     .rl-ball-lg { width: 48px; height: 48px; font-size: 1.45rem; }
     .rl-net-amount { font-size: 1.7rem; }
@@ -203,7 +179,6 @@
     .rl-cell { min-height: clamp(62px, 9vh, 92px); }
     .rl-cell-label { font-size: 1.2rem; }
     .rl-cell-pay { font-size: .82rem; }
-    .rl-chip { width: 50px; height: 50px; font-size: 1.1rem; }
     .rl-tools .btn { min-height: 42px; }
 }
 
@@ -245,8 +220,6 @@
     .rl-table { padding: 12px 14px; gap: 10px; }
     .rl-fieldset { gap: 10px; }
     .rl-cell { min-height: 54px; padding: 6px 6px; }
-    .rl-chips { justify-content: space-between; gap: 4px; }
-    .rl-chip { width: 44px; height: 44px; }
     /* Girar siempre al alcance del pulgar, fijo encima de la barra inferior. Fondo opaco: nada de la mesa se ve detrás. */
     .rl-spinbar {
         position: fixed; left: 0; right: 0; bottom: var(--bottombar-h); z-index: 30;
@@ -285,9 +258,6 @@
     }
 }
 @media (max-width: 380px) {
-    .rl-chips { flex-wrap: nowrap; gap: 2px; }
-    .rl-chip { width: 38px; height: 38px; font-size: .92rem; }
-    .rl-chip-custom { font-size: .8rem; }
     .rl-cell-label { font-size: .98rem; }
     .rl-cell-pay { font-size: .7rem; }
     .rl-tools .btn { white-space: nowrap; font-size: .8rem; padding-inline: 6px; }
