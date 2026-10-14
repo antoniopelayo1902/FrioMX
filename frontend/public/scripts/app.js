@@ -450,4 +450,42 @@
         setPhoto, getPhoto, paintAvatars, uuidv4,
         betControl, safeNext, LOBBY, LOGIN,
     };
+
+    function connectStream() {
+        const token = getToken(); // Reutilizando la función de sesión existente
+        if (!token) return;
+    
+        const evtSource = new EventSource(`/api/stream?token=${token}`);
+        
+        evtSource.addEventListener('balanceUpdate', (event) => {
+            const data = JSON.parse(event.data);
+            console.log("¡Actualización de saldo en tiempo real!", data.balance);
+            setBalance(data.balance); // Usamos tu función setBalance ya existente
+        });
+
+        // Añadir el escuchador del Ranking
+        let rankTimeout;
+        evtSource.addEventListener('leaderboardUpdate', () => {
+            console.log("¡El ranking global se ha actualizado!");
+            // Limitamos las peticiones para que espere 2 segundos después del último mensaje antes de recargar
+            clearTimeout(rankTimeout);
+            rankTimeout = setTimeout(() => {
+                // Si la función loadCurrent de ranking existe en la página actual, recargar el widget
+                if (typeof loadCurrent === 'function') {
+                    loadCurrent();
+                } else if (location.pathname === '/ranking') {
+                     // Si no está expuesta, la forma rápida para esta página específica
+                     location.reload(); 
+                }
+            }, 2000); 
+        });
+    
+        evtSource.onerror = () => {
+            evtSource.close();
+            setTimeout(connectStream, 5000); 
+        };
+    }
+    
+    // Iniciar conexión al cargar la app
+    connectStream();
 })();

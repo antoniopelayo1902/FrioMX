@@ -8,6 +8,7 @@ const games = require('../services/gameService');
 const wallet = require('../services/walletService');
 const leaderboard = require('../services/leaderboardService');
 const storage = require('../services/storageService');
+const stream = require('../services/streamService');
 
 const tooMany = (req, res) => res.status(429).json({ error: 'Demasiados intentos, espera un minuto', code: 'RATE_LIMITED' });
 
@@ -87,23 +88,46 @@ function buildRouter({ rng, authLimit = 10, profileLimit = 5 } = {}) {
         res.json(await games.minesActive(req.user));
     }));
     router.post('/games/mines/cashout', requireAuth, wrap(async (req, res) => {
-        res.json(await games.minesCashout(req.user, req.body, rng));
+        const result = await games.minesCashout(req.user, req.body, rng);
+        stream.sendToUser(req.userId, 'balanceUpdate', { balance: result.newBalance });
+        stream.broadcast('leaderboardUpdate', { message: 'El ranking se ha actualizado' });
+        res.json(result);
     }));
     router.post('/games/hi-lo/deal', requireAuth, wrap(async (req, res) => {
-        res.status(201).json(await games.hiloDeal(req.user, req.body, rng));
+        const result = await games.hiloDeal(req.user, req.body, rng);
+        stream.sendToUser(req.userId, 'balanceUpdate', { balance: result.newBalance });
+        stream.broadcast('leaderboardUpdate', { message: 'El ranking se ha actualizado' });
+        res.status(201).json(result);
     }));
     router.post('/games/hi-lo', requireAuth, wrap(async (req, res) => {
-        res.json(await games.hiloPlay(req.user, req.body, rng));
+        const result = await games.hiloPlay(req.user, req.body, rng);
+        stream.sendToUser(req.userId, 'balanceUpdate', { balance: result.newBalance });
+        stream.broadcast('leaderboardUpdate', { message: 'El ranking se ha actualizado' });
+        res.json(result);
     }));
     router.post('/games/roulette', requireAuth, wrap(async (req, res) => {
-        res.json(await games.roulettePlay(req.user, req.body, rng));
+        const result = await games.roulettePlay(req.user, req.body, rng);
+        
+        // Emitimos el evento de actualización de saldo
+        stream.sendToUser(req.userId, 'balanceUpdate', { balance: result.newBalance });
+        stream.broadcast('leaderboardUpdate', { message: 'El ranking se ha actualizado' });
+        
+        res.json(result);
     }));
     router.post('/games/mines/start', requireAuth, wrap(async (req, res) => {
-        res.status(201).json(await games.minesStart(req.user, req.body, rng));
+        const result = await games.minesStart(req.user, req.body, rng);
+        stream.sendToUser(req.userId, 'balanceUpdate', { balance: result.newBalance });
+        stream.broadcast('leaderboardUpdate', { message: 'El ranking se ha actualizado' });
+        res.status(201).json(result);
     }));
     router.post('/games/mines/reveal', requireAuth, wrap(async (req, res) => {
-        res.json(await games.minesReveal(req.user, req.body, rng));
+        const result = await games.minesReveal(req.user, req.body, rng);
+        stream.sendToUser(req.userId, 'balanceUpdate', { balance: result.newBalance });
+        stream.broadcast('leaderboardUpdate', { message: 'El ranking se ha actualizado' });
+        res.json(result);
     }));
+
+    router.get('/stream', requireAuth, (req, res) => stream.addClient(req.userId, req, res));
 
     return router;
 }
