@@ -146,6 +146,7 @@ Se trabaja en ramas `feature/*` con pull request a `main` y al menos una revisi√
 | Fichas como enteros | Decimales | Evita errores de redondeo en saldos. Los pagos con multiplicador se redondean hacia abajo. |
 | Terraform con estado en S3 y bloqueo nativo | Scripts bash solamente, CloudFormation | Reproducible, con plan previo y estado compartido entre los tres. El bloqueo nativo de S3 evita una tabla extra. |
 | Despliegue a EC2 con SSM Run Command | SSH desde GitHub | No abre el puerto 22 a internet ni guarda llaves privadas en GitHub. |
+| Tiempo Real con Server-Sent Events (SSE) | WebSockets (socket.io) | El flujo unidireccional (Push) de SSE es m√°s ligero, nativo en HTTP, y no requiere balanceadores de carga complejos. Es perfecto para notificar a los navegadores sobre cambios de saldo y ranking semanal. |
 
 ## 11. Riesgos
 
