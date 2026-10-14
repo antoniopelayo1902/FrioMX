@@ -103,6 +103,7 @@ Todas las rutas van bajo `/api`. Las marcadas con candado requieren `Authorizati
 | PUT /user/profile | 🔒 | `{field: "username"\|"email"\|"password", newValue}` | 200 perfil |
 | GET /user/balance | 🔒 | | 200 `{balance}` |
 | GET /user/activity | 🔒 | `?limit=20&cursor=` | 200 `{items:[{nameGame, BetStatus, balance, dateGame}], nextCursor}` |
+| GET /stream | 🔒 | `?token=` (requerido porque SSE no admite cabecera Authorization) | 200 `text/event-stream` Mantiene conexión persistente. Emite eventos `balanceUpdate` y `leaderboardUpdate`. |
 | POST /profile/upload | 🔒 | multipart `profileImage` | 200 `{success, profileImage}` (URL firmada) |
 | DELETE /profile/delete | 🔒 | | 200 `{success}` |
 | GET /profile/image | 🔒 | | 200 `{success, available, profileImage}`: `available` es `false` sin `UPLOADS_BUCKET`; `profileImage` es la URL firmada (15 min) o `null` |
@@ -353,6 +354,7 @@ server {
 }
 ```
 
+- **Configuración de Proxy para SSE:** Nginx incluye un bloque `location /api/stream` dedicado con `proxy_buffering off`, `proxy_cache off` y `proxy_http_version 1.1` para garantizar que los eventos Server-Sent Events lleguen inmediatamente a los clientes sin retención en búfer ni desconexiones tempranas.
 - El `user_data` reemplaza completo `/etc/nginx/nginx.conf` de Amazon Linux 2023 (guarda el original en `nginx.conf.orig`) por uno sin el bloque `server` por defecto, que solo incluye `conf.d/*.conf`, así nada más compite por el puerto 80. Valida con `nginx -t` y habilita el servicio con `systemctl enable --now nginx` (en Amazon Linux 2023 instalarlo no lo arranca).
 - Express usa `app.set("trust proxy", 1)` para que el límite de intentos vea la IP real.
 - Un archivo de más de 6 MB lo rechaza nginx con 413 antes de llegar al backend. `profile.js` valida 5 MB antes de subir, así el jugador ve el mensaje propio en lugar del 413.
