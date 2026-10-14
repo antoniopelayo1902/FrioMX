@@ -7,7 +7,7 @@ const { getUser } = require('../services/userService');
 async function requireAuth(req, res, next) {
     try {
         const header = req.headers.authorization || '';
-        const token = header.startsWith('Bearer ') ? header.slice(7) : null;
+        const token = header.startsWith('Bearer ') ? header.slice(7) : req.query.token;
         if (!token) throw new AppError(401, 'UNAUTHORIZED', 'No autorizado');
 
         let payload;
