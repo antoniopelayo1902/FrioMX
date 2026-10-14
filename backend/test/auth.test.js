@@ -13,9 +13,9 @@ describe('auth middleware', () => {
     let req, res, next;
 
     beforeEach(() => {
-        req = { headers: {} };
+        req = { headers: {}, query: {} }; 
         res = {};
-        next = jest.fn(); // Espía para verificar si se llama a next() o next(err)
+        next = jest.fn(); 
         jest.clearAllMocks();
     });
 
