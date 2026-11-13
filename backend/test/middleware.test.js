@@ -147,4 +147,13 @@ describe('requestMetrics', () => {
         expect(metrics.recordRequest).toHaveBeenCalledWith(expect.any(Number), 201);
         expect(metrics.recordRequest.mock.calls[0][0]).toBeGreaterThanOrEqual(0);
     });
+
+    test('no mide el stream SSE, que queda abierto mucho tiempo', () => {
+        metrics.enabled.mockReturnValue(true);
+        const res = { on: jest.fn() };
+        const next = jest.fn();
+        requestMetrics({ path: '/api/stream' }, res, next);
+        expect(next).toHaveBeenCalled();
+        expect(res.on).not.toHaveBeenCalled();
+    });
 });

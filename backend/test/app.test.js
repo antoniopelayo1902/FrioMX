@@ -274,6 +274,14 @@ describe('rutas', () => {
             expect(stream.broadcast).toHaveBeenCalledWith('leaderboardUpdate', expect.any(Object));
         });
 
+        test('una casilla segura en minas (sin saldo en la respuesta) no manda eventos', async () => {
+            games.minesReveal.mockResolvedValue({ result: 'safe', cell: 3, status: 'ACTIVE' });
+            const res = await request(app).post('/api/games/mines/reveal').set(AUTH).send({ cell: 3 });
+            expect(res.status).toBe(200);
+            expect(stream.sendToUser).not.toHaveBeenCalled();
+            expect(stream.broadcast).not.toHaveBeenCalled();
+        });
+
         test('si la jugada falla no se manda ningún evento', async () => {
             games.roulettePlay.mockRejectedValue(new AppError(409, 'INSUFFICIENT_FUNDS', 'Sin fichas'));
             const res = await request(app).post('/api/games/roulette').set(AUTH).send({});

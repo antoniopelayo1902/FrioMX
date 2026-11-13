@@ -20,7 +20,7 @@ FrioMx resuelve eso con una capa de datos en DynamoDB, toda la lógica de juego 
 
 ## 3. Flujos end-to-end
 
-**Flujo 1, jugar una partida.** El jugador apuesta. El backend toma el usuario del token, valida monto (entero de 1 a 10 000) y jugada, genera el resultado con `crypto.randomInt` y escribe en una sola transacción de DynamoDB el saldo (con la condición de que alcance), la entrada de historial y la ganancia semanal. Hi-lo y minas guardan la ronda abierta en el servidor, que es el único que conoce la segunda carta o la posición de las minas. Resultado observable: saldo nuevo y partida en el historial.
+**Flujo 1, jugar una partida.** El jugador apuesta. El backend toma el usuario del token, valida monto (entero de 1 a 10 000) y jugada, genera el resultado con `crypto.randomInt` y escribe en una sola transacción de DynamoDB el saldo (con la condición de que alcance), la entrada de historial y la ganancia semanal. Hi-lo y minas guardan la ronda abierta en el servidor, que es el único que conoce la segunda carta o la posición de las minas. Resultado observable: saldo nuevo y partida en el historial. El saldo también se empuja en tiempo real por Server-Sent Events (`/api/stream`) a todas las pestañas abiertas del jugador, y la página de ranking se actualiza sola cuando alguien juega.
 
 **Flujo 2, recargar fichas.** El jugador elige un paquete de 500, 1000 o 2500. El backend valida el paquete y el límite de 3 recargas por día, crea la recarga como pendiente con un id derivado de una clave de idempotencia, la encola en SQS y responde 202. La Lambda `friomx-recharge-worker` acredita las fichas con una transacción condicionada a que la recarga siga pendiente, así un mensaje repetido no acredita dos veces, y avisa por correo con SNS. Tras 3 intentos fallidos el mensaje pasa a una cola de fallidos y suena una alarma. Resultado observable: estado "completada", saldo actualizado y correo.
 
@@ -64,6 +64,7 @@ El lab no permite crear roles IAM, así que todo usa `LabRole` y `LabInstancePro
 | Fichas enteras | Decimales | Sin errores de redondeo; los pagos con multiplicador se redondean hacia abajo. |
 | Terraform con estado en S3 y bloqueo nativo | Scripts bash, CloudFormation | Reproducible, con plan previo y sin tabla de bloqueo extra. |
 | Despliegue por SSM | SSH desde GitHub | Puerto 22 cerrado y sin llaves en GitHub. |
+| Tiempo real con Server-Sent Events | WebSockets (socket.io), consultar cada pocos segundos | Solo hace falta que el servidor avise al navegador; SSE es HTTP normal detrás de nginx y el navegador reconecta solo. |
 
 Limitaciones aceptadas: sin HTTPS, porque el lab no ofrece dominio ni certificado, y una sola instancia como punto único de falla, que se recupera con Terraform y el CD.
 

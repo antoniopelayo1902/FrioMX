@@ -106,9 +106,10 @@ cp "${ROOT}/scripts/deploy-on-instance.sh" "${PKG}/scripts/"
 if [[ -f "${ROOT}/infra/cloudwatch-agent.json" ]]; then
   cp "${ROOT}/infra/cloudwatch-agent.json" "${PKG}/infra/"
 fi
+cp "${ROOT}/infra/nginx/friomx.conf" "${PKG}/infra/nginx-friomx.conf"
 
 TGZ="${STAGE}/release.tgz"
-PKG_ITEMS=(backend frontend scripts/deploy-on-instance.sh)
+PKG_ITEMS=(backend frontend scripts/deploy-on-instance.sh infra/nginx-friomx.conf)
 [[ -f "${PKG}/infra/cloudwatch-agent.json" ]] && PKG_ITEMS+=(infra/cloudwatch-agent.json)
 tar -C "${PKG}" ${TAR_FLAGS[@]+"${TAR_FLAGS[@]}"} -czf "${TGZ}" "${PKG_ITEMS[@]}"
 

@@ -69,6 +69,48 @@ if [[ -f "${RELEASE_DIR}/infra/cloudwatch-agent.json" ]] && [[ -x /opt/aws/amazo
     || log "No se pudo aplicar la configuración del agente (no bloquea el despliegue)"
 fi
 
+# 3b. Configuración de nginx desde el repo. El user_data solo corre en el primer arranque,
+# así que sin este paso un cambio de nginx nunca llegaría a una instancia ya creada.
+NGINX_CONF=/etc/nginx/conf.d/friomx.conf
+NGINX_PREV="${NGINX_CONF}.prev"
+NGINX_CHANGED=false
+restore_nginx() {
+  if [[ "${NGINX_CHANGED}" == true && -f "${NGINX_PREV}" ]]; then
+    log "Restaurando ${NGINX_CONF} anterior"
+    cp -p "${NGINX_PREV}" "${NGINX_CONF}"
+    if nginx -t; then
+      systemctl reload nginx || log "No se pudo recargar nginx"
+    else
+      log "nginx no aceptó la configuración anterior"
+    fi
+  fi
+}
+restore_env() {
+  if [[ "${HAD_ENV}" == true && -f "${ENV_PREV}" ]]; then
+    log "Restaurando ${ENV_FILE} anterior"
+    cp -p "${ENV_PREV}" "${ENV_FILE}"
+  fi
+}
+NEW_NGINX="${RELEASE_DIR}/infra/nginx-friomx.conf"
+if [[ -f "${NEW_NGINX}" ]] && ! cmp -s "${NEW_NGINX}" "${NGINX_CONF}"; then
+  log "Actualizando ${NGINX_CONF}"
+  if [[ -f "${NGINX_CONF}" ]]; then cp -p "${NGINX_CONF}" "${NGINX_PREV}"; else rm -f "${NGINX_PREV}"; fi
+  install -o root -g root -m 0644 "${NEW_NGINX}" "${NGINX_CONF}"
+  NGINX_CHANGED=true
+  if ! nginx -t; then
+    log "nginx rechazó la configuración nueva"
+    restore_nginx
+    restore_env
+    exit 1
+  fi
+  if ! systemctl reload nginx; then
+    log "No se pudo recargar nginx con la configuración nueva"
+    restore_nginx
+    restore_env
+    exit 1
+  fi
+fi
+
 # 4. Cambio de enlace, guardando el previo.
 PREVIOUS=""
 if [[ -L "${CURRENT}" ]]; then
@@ -95,8 +137,8 @@ healthy() {
   return 1
 }
 
-# 5-6. Reinicio y verificación.
-restart
+# 5-6. Reinicio y verificación. Si el reinicio falla, healthy lo detecta y corre el rollback.
+restart || log "El reinicio de los servicios falló"
 if ! healthy; then
   log "La versión nueva no respondió en ${HEALTH_URL} o ${FRONT_URL}"
   journalctl -u friomx-backend -n 30 --no-pager || true
@@ -106,16 +148,15 @@ if ! healthy; then
   # 7. Rollback (código y backend.env previos).
   if [[ -n "${PREVIOUS}" && -d "${PREVIOUS}" && "${PREVIOUS}" != "${RELEASE_DIR}" ]]; then
     log "Regresando a ${PREVIOUS}"
-    if [[ "${HAD_ENV}" == true && -f "${ENV_PREV}" ]]; then
-      log "Restaurando ${ENV_FILE} anterior"
-      cp -p "${ENV_PREV}" "${ENV_FILE}"
-    fi
+    restore_env
     ln -sfn "${PREVIOUS}" "${CURRENT}.new"
     mv -Tf "${CURRENT}.new" "${CURRENT}"
+    restore_nginx
     restart
     healthy || log "La versión previa tampoco respondió"
   else
     log "No hay versión previa para regresar"
+    restore_nginx
   fi
   exit 1
 fi

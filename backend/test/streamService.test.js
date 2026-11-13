@@ -78,14 +78,36 @@ describe('streamService', () => {
         }
     });
 
-    test('una reconexión del mismo usuario reemplaza la conexión anterior', () => {
+    test('dos pestañas del mismo usuario reciben el saldo', () => {
+        const a = fakeRes();
+        const b = fakeRes();
+        stream.addClient('u1', new EventEmitter(), a);
+        stream.addClient('u1', new EventEmitter(), b);
+        stream.sendToUser('u1', 'balanceUpdate', { balance: 5 });
+        expect(a.write).toHaveBeenCalledWith('data: {"balance":5}\n\n');
+        expect(b.write).toHaveBeenCalledWith('data: {"balance":5}\n\n');
+    });
+
+    test('al navegar, cerrar la página vieja no desconecta a la nueva', () => {
+        const oldReq = new EventEmitter();
         const old = fakeRes();
         const fresh = fakeRes();
-        stream.addClient('u1', new EventEmitter(), old);
+        stream.addClient('u1', oldReq, old);
         stream.addClient('u1', new EventEmitter(), fresh);
+        oldReq.emit('close');
         old.write.mockClear();
-        stream.sendToUser('u1', 'balanceUpdate', { balance: 5 });
+        stream.sendToUser('u1', 'balanceUpdate', { balance: 7 });
         expect(old.write).not.toHaveBeenCalled();
-        expect(fresh.write).toHaveBeenCalledWith('data: {"balance":5}\n\n');
+        expect(fresh.write).toHaveBeenCalledWith('data: {"balance":7}\n\n');
+    });
+
+    test('al cerrar la última pestaña el usuario deja de recibir y una nueva conexión funciona', () => {
+        const req = new EventEmitter();
+        stream.addClient('u1', req, fakeRes());
+        req.emit('close');
+        const again = fakeRes();
+        stream.addClient('u1', new EventEmitter(), again);
+        stream.sendToUser('u1', 'balanceUpdate', { balance: 9 });
+        expect(again.write).toHaveBeenCalledWith('data: {"balance":9}\n\n');
     });
 });

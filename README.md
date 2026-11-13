@@ -41,6 +41,7 @@ script (`scripts/deploy.sh`) o con el CD al hacer merge a `main`:
 - Bono diario y ranking semanal: EventBridge con las Lambdas
   `friomx-daily-bonus` y `friomx-weekly-ranking`, página de Ranking.
 - Foto de perfil en S3 con URL firmada.
+- Saldo y ranking en tiempo real con Server-Sent Events (`/api/stream`).
 - Monitoreo: 5 métricas, 2 alarmas con correo al equipo y dashboard `FrioMx`.
 - Pruebas: 70% de cobertura mínima en backend y Lambdas, y pruebas de punta a
   punta del frontend con Playwright.
