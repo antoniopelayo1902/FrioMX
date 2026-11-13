@@ -1,48 +1,53 @@
-// Mapa para guardar las conexiones activas: userId -> objeto de respuesta (res)
+// Conexiones SSE activas: userId -> Set de respuestas (una por pestaña o página abierta).
+// Es un Set porque la app es multipágina: al navegar, la página nueva conecta antes de que la vieja cierre.
 const clients = new Map();
 
+const PING_MS = 30000;
+
+function write(res, eventType, data) {
+    res.write(`event: ${eventType}\n`);
+    res.write(`data: ${JSON.stringify(data)}\n\n`);
+}
+
 function addClient(userId, req, res) {
-    // Configuramos las cabeceras HTTP requeridas para Server-Sent Events (SSE)
+    // Cabeceras de Server-Sent Events. Mismo origen detrás de nginx, así que no lleva CORS.
     res.writeHead(200, {
         'Content-Type': 'text/event-stream',
         'Cache-Control': 'no-cache',
-        'Connection': 'keep-alive',
-        'Access-Control-Allow-Origin': '*' // Previene bloqueos de CORS en desarrollo
+        Connection: 'keep-alive',
     });
 
-    // Guardamos la conexión activa del usuario
-    clients.set(userId, res);
+    let conns = clients.get(userId);
+    if (!conns) {
+        conns = new Set();
+        clients.set(userId, conns);
+    }
+    conns.add(res);
 
-    // Mandamos un evento inicial silencioso para confirmar la conexión
-    res.write('event: connected\n');
-    res.write(`data: ${JSON.stringify({ status: 'ok' })}\n\n`);
+    write(res, 'connected', { status: 'ok' });
 
-    // "Latido" (ping) cada 30 segundos para evitar que el navegador o el balanceador de AWS cierren la conexión por inactividad
-    const ping = setInterval(() => {
-        res.write(': ping\n\n');
-    }, 30000);
+    // Ping para que nginx o el navegador no corten la conexión por inactividad.
+    const ping = setInterval(() => res.write(': ping\n\n'), PING_MS);
 
-    // Cuando el usuario cierra la pestaña o pierde internet, limpiamos la memoria
     req.on('close', () => {
         clearInterval(ping);
-        clients.delete(userId);
+        // Solo se borra esta conexión; las otras pestañas del mismo usuario siguen recibiendo.
+        conns.delete(res);
+        if (conns.size === 0 && clients.get(userId) === conns) clients.delete(userId);
     });
 }
 
-// Enviar un evento a un usuario específico (ideal para actualizaciones de saldo personal)
+// Evento para un usuario (saldo personal), en todas sus pestañas.
 function sendToUser(userId, eventType, data) {
-    const res = clients.get(userId);
-    if (res) {
-        res.write(`event: ${eventType}\n`);
-        res.write(`data: ${JSON.stringify(data)}\n\n`);
-    }
+    const conns = clients.get(userId);
+    if (!conns) return;
+    for (const res of conns) write(res, eventType, data);
 }
 
-// Enviar evento a TODOS los usuarios conectados (ideal para cuando el ranking semanal cambia)
+// Evento para todos los conectados (cambio de ranking).
 function broadcast(eventType, data) {
-    for (const res of clients.values()) {
-        res.write(`event: ${eventType}\n`);
-        res.write(`data: ${JSON.stringify(data)}\n\n`);
+    for (const conns of clients.values()) {
+        for (const res of conns) write(res, eventType, data);
     }
 }
 

@@ -119,6 +119,7 @@ http {
 }
 EOF
 
+# Copia de infra/nginx/friomx.conf para el primer arranque; cada deploy la reinstala desde el repo.
 cat > /etc/nginx/conf.d/friomx.conf <<'EOF'
 server {
   listen 80 default_server;
@@ -133,14 +134,21 @@ server {
     proxy_set_header X-Forwarded-Proto $scheme;
   }
 
+  # SSE: sin buffer para que cada evento llegue al momento; el backend manda ping cada 30 s.
   location /api/stream {
     proxy_pass http://127.0.0.1:3000;
     proxy_http_version 1.1;
     proxy_set_header Connection "";
     proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
     proxy_buffering off;
     proxy_cache off;
     proxy_read_timeout 1h;
+    # EventSource no manda headers: el token viaja en ?token= y no debe quedar en los logs.
+    access_log off;
+    error_log /var/log/nginx/error.log crit;
   }
 
   location / {
