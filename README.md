@@ -51,19 +51,19 @@ script (`scripts/deploy.sh`) o con el CD al hacer merge a `main`:
 En local corren juegos, historial, perfil sin foto y ranking de la semana en
 curso (ver [Notas](#notas)).
 
-## Pendiente
+## Verificación en la nube (19-nov-2026)
 
-- Verificación del monitoreo en la nube: el dashboard `FrioMx` y las 2 alarmas
-  (`friomx-api-5xx` y `friomx-recharge-dlq`) están en Terraform (módulo
-  `monitoring`). Se comprueban en cada sesión con
-  `bash scripts/monitoring-check.sh` y `--demo-alarms` (ver
-  [Operación del lab](#operación-del-lab)); falta dejar registro de una corrida
-  con los correos de alarma recibidos.
-- Fuera de alcance: HTTPS, porque el lab no ofrece dominio ni certificado.
-- Para el reporte en PDF: el diagrama de arquitectura (`docs/02-HLD.md`,
-  sección 3) está en mermaid. Hay que exportarlo a imagen, por ejemplo
-  pegándolo en [mermaid.live](https://mermaid.live) y descargando PNG o SVG, o
-  rehacerlo en draw.io.
+Corrida completa en un Learner Lab vacío, solo con lo que hay en este repo:
+
+- Despliegue desde cero: `bootstrap-state.sh` + `deploy.sh`, salud OK al
+  primer intento.
+- `scripts/smoke.sh`: 10 PASS, 0 FAIL (los 3 flujos).
+- CD en verde de punta a punta (pruebas + deploy) al hacer merge del PR #10.
+- `scripts/monitoring-check.sh`: las 6 métricas propias con datos.
+  `--demo-alarms`: `friomx-api-5xx` y `friomx-recharge-dlq` pasaron a ALARM
+  y llegó el correo; `--reset` las regresó a OK.
+
+Fuera de alcance: HTTPS, porque el lab no ofrece dominio ni certificado.
 
 ## Correr en local
 
@@ -368,6 +368,12 @@ credenciales del lab vencieron, el CD falla en el paso de AWS hasta que
 vuelvas a correr este script. Para lanzar el CD a mano:
 `gh workflow run CD`.
 
+Los secretos apuntan a **una sola cuenta del lab**: la que tiene el bucket
+`friomx-tfstate-<cuenta>` de `TF_BACKEND_HCL`. Solo el dueño de esa cuenta
+debe correr `update-gh-secrets.sh`; si otro integrante pone sus credenciales,
+el CD falla porque no tiene acceso a ese bucket. Para desarrollar, los demás
+usan la app en local o su propio lab sin tocar los secretos del repo.
+
 ### 7. Si se reinicia el lab
 
 Al terminar la sesión, el lab detiene la instancia; al iniciar otra, la vuelve
@@ -380,6 +386,13 @@ a encender y los servicios de la app arrancan solos.
   `bash scripts/deploy.sh`.
 - `bash scripts/resume-lab.sh` hace la revisión de arranque de una vez (ver
   [Operación del lab](#operación-del-lab)).
+
+Si el lab se reinició por completo (botón **Reset** o se agotó el presupuesto),
+se borra todo, incluido el bucket del estado, y `resume-lab.sh` falla con
+`S3 bucket "friomx-tfstate-<cuenta>" does not exist`. En ese caso se despliega
+desde cero: paso 2.1 (`bootstrap-state.sh`), paso 3 (`deploy.sh`), paso 4
+(confirmar los correos de SNS, porque las suscripciones son nuevas) y
+`update-gh-secrets.sh`. La IP pública cambia.
 
 ### 8. Destruir
 
@@ -483,6 +496,10 @@ líneas, ramas, funciones y sentencias (`coverageThreshold` en
 en cada pull request a `main` en 4 jobs: `backend` (con DynamoDB Local como
 servicio), `lambdas`, `e2e` (Playwright contra la app completa levantada en el
 runner) y `terraform` (`fmt -check` y `validate`).
+
+Los workflows usan `runs-on: ubuntu-24.04` y no `ubuntu-latest`: desde
+octubre de 2026 `ubuntu-latest` es Ubuntu 26.04, que Playwright 1.58.2 no
+soporta, y el job `e2e` fallaba al instalar Chromium (eso bloqueaba el CD).
 
 Pruebas de punta a punta del frontend, con Playwright, contra la app levantada
 en local (DynamoDB Local, backend y frontend, ver
