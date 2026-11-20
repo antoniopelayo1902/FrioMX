@@ -9,3 +9,4 @@ infra/envs/lab/backend.hcl
 infra/envs/lab/lab.tfvars
 infra/envs/lab/.build/
 lambdas/dist/
+backend/local-db/
